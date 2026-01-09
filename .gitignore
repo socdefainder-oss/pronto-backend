@@ -1,0 +1,15 @@
+# logs
+*.log
+
+# node
+node_modules/
+
+# env (NUNCA subir)
+.env
+.env.*
+
+# build
+dist/
+
+# prisma local (se usar sqlite algum dia)
+prisma/dev.db
