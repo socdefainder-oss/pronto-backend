@@ -5,12 +5,12 @@ import { auth, type AuthedRequest } from "../middlewares/auth.js";
 
 export const restaurantRoutes = Router();
 
-// Criar restaurante (dono logado)
+// ========== CRIAÇÃO ==========
 restaurantRoutes.post("/", auth, async (req: AuthedRequest, res) => {
   const schema = z.object({
     name: z.string().min(2),
     slug: z.string().min(2).regex(/^[a-z0-9-]+$/),
-    phone: z.string().min(8), // ex: 5511999999999
+    phone: z.string().min(8),
     description: z.string().optional(),
     address: z.string().optional()
   });
@@ -31,7 +31,7 @@ restaurantRoutes.post("/", auth, async (req: AuthedRequest, res) => {
   return res.json({ restaurant });
 });
 
-// Meus restaurantes
+// ========== LISTAR MEUS RESTAURANTES ==========
 restaurantRoutes.get("/mine", auth, async (req: AuthedRequest, res) => {
   const ownerId = req.userId!;
   const restaurants = await prisma.restaurant.findMany({
@@ -41,7 +41,69 @@ restaurantRoutes.get("/mine", auth, async (req: AuthedRequest, res) => {
   return res.json({ restaurants });
 });
 
-// Público: pegar restaurante por slug + categorias + produtos ativos
+// ========== PEGAR RESTAURANTE POR ID (PRIVADO) ==========
+restaurantRoutes.get("/:id", auth, async (req: AuthedRequest, res) => {
+  const ownerId = req.userId!;
+  const { id } = req.params;
+
+  const restaurant = await prisma.restaurant.findFirst({
+    where: {
+      id: id,
+      ownerId: ownerId,
+    },
+  });
+
+  if (!restaurant) {
+    return res.status(404).json({ error: "Restaurante não encontrado ou não pertence a você" });
+  }
+
+  return res.json(restaurant);
+});
+
+// ========== ATUALIZAR RESTAURANTE ==========
+restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
+  const schema = z.object({
+    name: z.string().min(2).optional(),
+    slug: z.string().min(2).regex(/^[a-z0-9-]+$/).optional(),
+    phone: z.string().min(8).optional(),
+    description: z.string().optional(),
+    address: z.string().optional()
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  const ownerId = req.userId!;
+  const { id } = req.params;
+  const data = parsed.data;
+
+  // Verifica se restaurante existe e pertence ao usuário
+  const restaurant = await prisma.restaurant.findFirst({
+    where: { id, ownerId },
+  });
+
+  if (!restaurant) {
+    return res.status(404).json({ error: "Restaurante não encontrado" });
+  }
+
+  // Se slug foi alterado, verifica se já existe
+  if (data.slug && data.slug !== restaurant.slug) {
+    const slugExists = await prisma.restaurant.findUnique({
+      where: { slug: data.slug },
+    });
+    if (slugExists) return res.status(409).json({ error: "Slug já em uso" });
+  }
+
+  // Atualiza
+  const updated = await prisma.restaurant.update({
+    where: { id },
+    data,
+  });
+
+  return res.json(updated);
+});
+
+// ========== PÚBLICO: PEGAR RESTAURANTE POR SLUG ==========
 restaurantRoutes.get("/public/:slug", async (req, res) => {
   const { slug } = req.params;
 
