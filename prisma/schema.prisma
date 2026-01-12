@@ -39,6 +39,7 @@ model Category {
   restaurantId String
   name         String
   sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true) 
   createdAt    DateTime @default(now())
 
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id])

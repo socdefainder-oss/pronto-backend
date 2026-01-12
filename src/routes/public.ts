@@ -5,7 +5,7 @@ export const publicRoutes = Router();
 
 /**
  * GET /api/public/restaurants/:slug
- * Retorna dados públicos do restaurante pelo slug.
+ * Retorna dados públicos do restaurante pelo slug COM PRODUTOS E CATEGORIAS.
  */
 publicRoutes.get("/restaurants/:slug", async (req, res) => {
   try {
@@ -14,30 +14,80 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
       .toLowerCase();
 
     if (!slug) {
-      return res.status(400).json({ error: "Slug is required" });
+      return res.status(400).json({ error: "Slug é obrigatório" });
     }
 
     const restaurant = await prisma.restaurant.findUnique({
       where: { slug },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        phone: true,
-        description: true,
-        address: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        categories: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            products: {
+              where: { isActive: true },
+              orderBy: { sortOrder: "asc" }
+            }
+          }
+        },
+        products: {
+          where: { 
+            isActive: true,
+            categoryId: null 
+          },
+          orderBy: { sortOrder: "asc" }
+        }
       },
     });
 
     if (!restaurant) {
-      return res.status(404).json({ error: "Restaurant not found" });
+      return res.status(404).json({ error: "Restaurante não encontrado" });
     }
 
-    return res.json(restaurant);
+    // Reorganiza os dados para facilitar no frontend
+    const response = {
+      id: restaurant.id,
+      name: restaurant.name,
+      slug: restaurant.slug,
+      phone: restaurant.phone,
+      description: restaurant.description,
+      address: restaurant.address,
+      createdAt: restaurant.createdAt,
+      updatedAt: restaurant.updatedAt,
+      categories: restaurant.categories.map((cat) => ({
+        id: cat.id,
+        name: cat.name,
+        products: cat.products.map((p) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          price: p.priceCents / 100, // Converte centavos para reais
+          priceCents: p.priceCents,
+          imageUrl: p.imageUrl,
+          isActive: p.isActive
+        }))
+      })),
+      productsWithoutCategory: restaurant.products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.priceCents / 100,
+        priceCents: p.priceCents,
+        imageUrl: p.imageUrl,
+        isActive: p.isActive
+      }))
+    };
+
+    return res.json(response);
   } catch (err) {
     console.error("GET /api/public/restaurants/:slug error", err);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Erro interno do servidor" });
   }
+});
+
+/**
+ * GET /api/public/health
+ * Health check público
+ */
+publicRoutes.get("/health", (_req, res) => {
+  return res.json({ status: "ok", service: "pronto-public-api" });
 });
