@@ -25,7 +25,7 @@ try {
   try {
     // Fallback: usar db push que sincroniza o schema diretamente
     console.log("🔧 Sincronizando schema com o banco...");
-    execSync("npx prisma db push --skip-generate", {
+    execSync("npx prisma db push --skip-generate --accept-data-loss", {
       stdio: "inherit",
       env: { ...process.env },
     });
