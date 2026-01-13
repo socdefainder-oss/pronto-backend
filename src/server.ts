@@ -1,6 +1,5 @@
 import "dotenv/config";
 import express from "express";
-import cors from "cors";
 import { authRoutes } from "./routes/auth.js";
 import { restaurantRoutes } from "./routes/restaurants.js";
 import { catalogRoutes } from "./routes/catalog.js";
@@ -14,47 +13,31 @@ const app = express();
 app.use(express.json());
 
 /**
- * CORS (Render backend -> Vercel frontend)
+ * CORS - Middleware customizado para máximo controle
  */
 const corsOrigin = process.env.CORS_ORIGIN || "https://pronto-frontend-rust.vercel.app";
-
-// Suporta múltiplas origens separadas por vírgula
 const allowedOrigins = corsOrigin.split(",").map(s => s.trim()).filter(Boolean);
 
-const corsOptions = {
-  origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    // Sempre permite requisições sem origin (health checks, server-to-server)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Se "*" foi configurado, permite qualquer origem
-    if (corsOrigin === "*") {
-      return callback(null, true);
-    }
-    
-    // Verifica se a origem está na lista de permitidas
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // Rejeita outras origens
-    console.warn(`CORS rejected origin: ${origin}`);
-    return callback(null, false);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  exposedHeaders: ["Content-Length"],
-  maxAge: 86400,
-  preflightContinue: false,
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-
-// Responde a preflight requests explicitamente
-app.options("*", cors(corsOptions));
+app.use((req, res, next) => {
+  const origin = req.headers.origin || "";
+  
+  // Permite se "*" ou se origin está na lista
+  if (corsOrigin === "*" || allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  }
+  
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  res.setHeader("Access-Control-Max-Age", "86400");
+  
+  // Responde a OPTIONS (preflight)
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
 
 /**
  * Health check
