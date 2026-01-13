@@ -5,8 +5,7 @@
  * Se as migrações falharem, tenta db push como fallback
  */
 
-const { execSync } = require("child_process");
-const path = require("path");
+import { execSync } from "child_process";
 
 const isProduction = process.env.NODE_ENV === "production" || process.env.RENDER === "true";
 
