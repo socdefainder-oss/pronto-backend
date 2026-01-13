@@ -15,39 +15,25 @@ app.use(express.json());
 
 /**
  * CORS (Render backend -> Vercel frontend)
- * - Lê CORS_ORIGIN do env (pode ser 1 ou mais, separado por vírgula)
- * - Responde preflight (OPTIONS) corretamente
  */
-const allowedOrigins = (process.env.CORS_ORIGIN || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+const corsOrigin = process.env.CORS_ORIGIN || "*";
+const corsWhitelist = corsOrigin === "*" 
+  ? "*" 
+  : corsOrigin.split(",").map(s => s.trim());
 
-// Se não configurou origens, permite tudo (útil para dev local)
-// Em produção, SEMPRE defina CORS_ORIGIN
 const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Requests server-to-server / ferramentas / health-checks podem vir sem Origin
-    if (!origin) return callback(null, true);
-
-    // Se não configurou CORS_ORIGIN, permite tudo (útil para dev/local)
-    if (allowedOrigins.length === 0) return callback(null, true);
-
-    // Permite se estiver na lista
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-
-    // Bloqueia se não estiver
-    return callback(new Error(`CORS bloqueado para origem: ${origin}`));
-  },
+  origin: corsWhitelist,
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
 
-// Responde preflight para qualquer rota (crítico para browser)
-app.options("*", cors());
+// Responde explicitamente a preflight em todas as rotas
+app.options("*", cors(corsOptions));
 
 /**
  * Health check
@@ -80,9 +66,5 @@ const port = Number(process.env.PORT || 3333);
 
 app.listen(port, () => {
   console.log(`✅ pronto-backend rodando na porta ${port}`);
-  if (allowedOrigins.length > 0) {
-    console.log(`🔐 CORS liberado para: ${allowedOrigins.join(", ")}`);
-  } else {
-    console.log("⚠️ CORS_ORIGIN não definido (CORS aberto). Defina em produção!");
-  }
+  console.log(`🔐 CORS configurado para: ${corsOrigin}`);
 });
