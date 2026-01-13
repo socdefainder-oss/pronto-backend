@@ -6,16 +6,38 @@
  */
 
 import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const isProduction = process.env.NODE_ENV === "production" || process.env.RENDER === "true";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.join(__dirname, "..");
 
 console.log("🔄 Verificando estado do banco de dados...");
+
+// Garante que o Prisma Client está gerado
+try {
+  console.log("📦 Gerando Prisma Client...");
+  execSync("npx prisma generate", {
+    stdio: "inherit",
+    cwd: projectRoot,
+    env: { ...process.env },
+  });
+  console.log("✅ Prisma Client gerado!");
+} catch (generateError) {
+  console.warn("⚠️  Erro ao gerar Prisma Client:");
+  console.error(generateError.message);
+}
+
+// Aguarda um pouco para garantir que o client foi gerado
+await new Promise(resolve => setTimeout(resolve, 1000));
 
 try {
   // Tenta aplicar migrações
   console.log("📦 Aplicando migrações...");
   execSync("npx prisma migrate deploy --skip-generate", {
     stdio: "inherit",
+    cwd: projectRoot,
     env: { ...process.env },
   });
   console.log("✅ Migrações aplicadas com sucesso!");
@@ -27,6 +49,7 @@ try {
     console.log("🔧 Sincronizando schema com o banco...");
     execSync("npx prisma db push --skip-generate --accept-data-loss", {
       stdio: "inherit",
+      cwd: projectRoot,
       env: { ...process.env },
     });
     console.log("✅ Schema sincronizado com sucesso!");
