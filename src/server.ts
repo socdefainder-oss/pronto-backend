@@ -16,13 +16,27 @@ app.use(express.json());
 /**
  * CORS (Render backend -> Vercel frontend)
  */
-const corsOrigin = process.env.CORS_ORIGIN || "*";
-const corsWhitelist = corsOrigin === "*" 
-  ? "*" 
-  : corsOrigin.split(",").map(s => s.trim());
+const corsOrigin = process.env.CORS_ORIGIN || "https://pronto-frontend-rust.vercel.app";
 
 const corsOptions = {
-  origin: corsWhitelist,
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Permite requisições sem origin (server-to-server, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    // Se CORS_ORIGIN contém múltiplas origens
+    const allowedOrigins = corsOrigin.split(",").map(s => s.trim());
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Se é "*" (desenvolvimento), permite tudo
+    if (corsOrigin === "*") {
+      return callback(null, true);
+    }
+    
+    callback(new Error("CORS not allowed"));
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
