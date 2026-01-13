@@ -18,35 +18,42 @@ app.use(express.json());
  */
 const corsOrigin = process.env.CORS_ORIGIN || "https://pronto-frontend-rust.vercel.app";
 
+// Suporta múltiplas origens separadas por vírgula
+const allowedOrigins = corsOrigin.split(",").map(s => s.trim()).filter(Boolean);
+
 const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Permite requisições sem origin (server-to-server, curl, etc)
-    if (!origin) return callback(null, true);
-    
-    // Se CORS_ORIGIN contém múltiplas origens
-    const allowedOrigins = corsOrigin.split(",").map(s => s.trim());
-    
-    if (allowedOrigins.includes(origin)) {
+  origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Sempre permite requisições sem origin (health checks, server-to-server)
+    if (!origin) {
       return callback(null, true);
     }
     
-    // Se é "*" (desenvolvimento), permite tudo
+    // Se "*" foi configurado, permite qualquer origem
     if (corsOrigin === "*") {
       return callback(null, true);
     }
     
-    callback(new Error("CORS not allowed"));
+    // Verifica se a origem está na lista de permitidas
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Rejeita outras origens
+    console.warn(`CORS rejected origin: ${origin}`);
+    return callback(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  exposedHeaders: ["Content-Length"],
+  maxAge: 86400,
   preflightContinue: false,
   optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
 
-// Responde explicitamente a preflight em todas as rotas
+// Responde a preflight requests explicitamente
 app.options("*", cors(corsOptions));
 
 /**
@@ -61,20 +68,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/catalog", catalogRoutes);
 app.use("/api/public", publicRoutes); // ✅ NOVO
-
-/**
- * Error handler (para erros tipo CORS bloqueado)
- */
-app.use(
-  (err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    const msg = typeof err?.message === "string" ? err.message : "Erro interno";
-    // Se for erro de CORS, responde 403 com mensagem clara
-    if (msg.toLowerCase().includes("cors")) {
-      return res.status(403).json({ error: msg });
-    }
-    return res.status(500).json({ error: msg });
-  }
-);
 
 const port = Number(process.env.PORT || 3333);
 
