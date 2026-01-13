@@ -23,26 +23,28 @@ const allowedOrigins = (process.env.CORS_ORIGIN || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Requests server-to-server / ferramentas / health-checks podem vir sem Origin
-      if (!origin) return callback(null, true);
+// Se não configurou origens, permite tudo (útil para dev local)
+// Em produção, SEMPRE defina CORS_ORIGIN
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Requests server-to-server / ferramentas / health-checks podem vir sem Origin
+    if (!origin) return callback(null, true);
 
-      // Se não configurou CORS_ORIGIN, não bloqueia (útil para dev/local)
-      if (allowedOrigins.length === 0) return callback(null, true);
+    // Se não configurou CORS_ORIGIN, permite tudo (útil para dev/local)
+    if (allowedOrigins.length === 0) return callback(null, true);
 
-      // Permite se estiver na lista
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Permite se estiver na lista
+    if (allowedOrigins.includes(origin)) return callback(null, true);
 
-      // Bloqueia se não estiver
-      return callback(new Error(`CORS bloqueado para origem: ${origin}`));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+    // Bloqueia se não estiver
+    return callback(new Error(`CORS bloqueado para origem: ${origin}`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
 
 // Responde preflight para qualquer rota (crítico para browser)
 app.options("*", cors());
