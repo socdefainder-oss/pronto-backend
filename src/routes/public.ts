@@ -53,10 +53,11 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
       address: restaurant.address,
       createdAt: restaurant.createdAt,
       updatedAt: restaurant.updatedAt,
-      categories: restaurant.categories.map((cat) => ({
+      categories: restaurant.categories.map((cat: typeof restaurant.categories[number]) => ({
         id: cat.id,
         name: cat.name,
-        products: cat.products.map((p) => ({
+        sortOrder: cat.sortOrder,
+        products: cat.products.map((p: typeof cat.products[number]) => ({
           id: p.id,
           name: p.name,
           description: p.description,
@@ -66,7 +67,7 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
           isActive: p.isActive
         }))
       })),
-      productsWithoutCategory: restaurant.products.map((p) => ({
+      productsWithoutCategory: restaurant.products.map((p: typeof restaurant.products[number]) => ({
         id: p.id,
         name: p.name,
         description: p.description,

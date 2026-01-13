@@ -57,7 +57,7 @@ catalogRoutes.get("/categories/:restaurantId", auth, async (req: AuthedRequest, 
   });
   
   return res.json({ 
-    categories: categories.map(cat => ({
+    categories: categories.map((cat: typeof categories[number]) => ({
       ...cat,
       productCount: cat._count.products
     }))
@@ -139,7 +139,7 @@ catalogRoutes.post("/products", auth, async (req: AuthedRequest, res) => {
     name: z.string().min(1),
     description: z.string().optional().nullable(),
     priceCents: z.number().int().min(0),
-    imageUrl: z.string().url().optional().nullable(),
+    imageUrl: z.string().optional().nullable(), // REMOVIDO: .url()
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().optional()
   });
@@ -207,7 +207,7 @@ catalogRoutes.patch("/products/:id", auth, async (req: AuthedRequest, res) => {
     name: z.string().min(1).optional(),
     description: z.string().optional().nullable(),
     priceCents: z.number().int().min(0).optional(),
-    imageUrl: z.string().url().optional().nullable(),
+    imageUrl: z.string().optional().nullable(), // REMOVIDO: .url()
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().optional(),
     categoryId: z.string().optional().nullable()
@@ -303,10 +303,10 @@ catalogRoutes.get("/stats/:restaurantId", auth, async (req: AuthedRequest, res) 
 
   const stats = {
     totalCategories: categories.length,
-    activeCategories: categories.filter(c => c.isActive).length,
+    activeCategories: categories.filter((c: typeof categories[number]) => c.isActive).length,
     totalProducts: products.length,
-    activeProducts: products.filter(p => p.isActive).length,
-    productsByCategory: categories.map(cat => ({
+    activeProducts: products.filter((p: typeof products[number]) => p.isActive).length,
+    productsByCategory: categories.map((cat: typeof categories[number]) => ({
       categoryId: cat.id,
       productCount: cat._count.products
     }))

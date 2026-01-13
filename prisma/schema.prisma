@@ -8,53 +8,76 @@ datasource db {
 }
 
 model User {
-  id          String       @id @default(cuid())
-  name        String
-  email       String       @unique
-  password    String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   restaurants Restaurant[]
+
+  @@map("users")
 }
 
 model Restaurant {
-  id          String     @id @default(cuid())
+  id          String   @id @default(cuid())
   ownerId     String
   name        String
-  slug        String     @unique
-  phone       String
+  slug        String   @unique
+  phone       String   // WhatsApp (ex: 5511999999999)
   description String?
   address     String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   categories  Category[]
   products    Product[]
-  owner       User       @relation(fields: [ownerId], references: [id])
+
+  @@map("restaurants")
+  @@index([ownerId])
+  @@index([slug])
 }
 
 model Category {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   restaurantId String
   name         String
-  sortOrder    Int        @default(0)
-  createdAt    DateTime   @default(now())
-  isActive     Boolean    @default(true)
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   products     Product[]
+
+  @@map("categories")
+  @@index([restaurantId])
+  @@index([sortOrder])
+  @@index([isActive])
 }
 
 model Product {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   restaurantId String
   categoryId   String?
   name         String
   description  String?
   priceCents   Int
   imageUrl     String?
-  isActive     Boolean    @default(true)
-  sortOrder    Int        @default(0)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  category     Category?  @relation(fields: [categoryId], references: [id])
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category     Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@map("products")
+  @@index([restaurantId])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([sortOrder])
+  @@index([createdAt])
 }
