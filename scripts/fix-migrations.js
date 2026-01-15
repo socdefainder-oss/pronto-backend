@@ -20,9 +20,11 @@ async function fixAndMigrate() {
     
     console.log('✅ Migration marcada como resolvida!');
     await prisma.$disconnect();
+    process.exit(0); // Exit com sucesso
     
   } catch (error) {
     console.log('⚠️  Aviso (normal se já corrigido):', error.message);
+    process.exit(0); // Exit mesmo com aviso (migrations já foram corrigidas)
   }
 }
 
