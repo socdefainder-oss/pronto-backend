@@ -46,6 +46,7 @@ app.use((req, res, next) => {
  * Health check
  */
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/api/public/health", (_req, res) => res.json({ status: "ok" }));
 
 /**
  * Routes
@@ -64,4 +65,5 @@ app.listen(port, () => {
   console.log(`âœ… pronto-backend rodando na porta ${port}`);
   console.log(`ðŸ” CORS configurado para: ${corsOrigin}`);
 });
+
 
