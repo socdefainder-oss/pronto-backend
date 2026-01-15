@@ -25,21 +25,22 @@ model Restaurant {
   ownerId     String
   name        String
   slug        String   @unique
-  phone       String   // WhatsApp (ex: 5511999999999)
+  phone       String // WhatsApp (ex: 5511999999999)
   description String?
   address     String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  categories  Category[]
-  products    Product[]
-  orders      Order[]
-  coupons     Coupon[]
+  owner      User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  categories Category[]
+  products   Product[]
+  orders     Order[]
+  coupons    Coupon[]
+  Banner     Banner[]
 
-  @@map("restaurants")
   @@index([ownerId])
   @@index([slug])
+  @@map("restaurants")
 }
 
 model Category {
@@ -51,13 +52,13 @@ model Category {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  products     Product[]
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  products   Product[]
 
-  @@map("categories")
   @@index([restaurantId])
   @@index([sortOrder])
   @@index([isActive])
+  @@map("categories")
 }
 
 model Product {
@@ -73,16 +74,16 @@ model Product {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  category     Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  orderItems   OrderItem[]
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category   Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems OrderItem[]
 
-  @@map("products")
   @@index([restaurantId])
   @@index([categoryId])
   @@index([isActive])
   @@index([sortOrder])
   @@index([createdAt])
+  @@map("products")
 }
 
 model Customer {
@@ -93,11 +94,11 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orders      Order[]
-  addresses   CustomerAddress[]
+  orders    Order[]
+  addresses CustomerAddress[]
 
-  @@map("customers")
   @@index([phone])
+  @@map("customers")
 }
 
 model CustomerAddress {
@@ -114,11 +115,11 @@ model CustomerAddress {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  orders     Order[]
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orders   Order[]
 
-  @@map("customer_addresses")
   @@index([customerId])
+  @@map("customer_addresses")
 }
 
 model Order {
@@ -127,59 +128,59 @@ model Order {
   customerId       String
   addressId        String?
   couponId         String?
-  orderNumber      Int      // Número sequencial por restaurante
+  orderNumber      Int // Número sequencial por restaurante
   status           String   @default("pending") // pending, confirmed, preparing, ready, delivering, delivered, cancelled
-  subtotalCents    Int      // Total antes do desconto
+  subtotalCents    Int // Total antes do desconto
   discountCents    Int      @default(0) // Desconto aplicado pelo cupom
-  totalCents       Int      // Total final após desconto
+  totalCents       Int // Total final após desconto
   deliveryFeeCents Int      @default(0)
-  paymentMethod    String?  // pix, card, cash, online
+  paymentMethod    String? // pix, card, cash, online
   paymentStatus    String   @default("pending") // pending, paid, failed
-  notes            String?  // Observações do cliente
+  notes            String? // Observações do cliente
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  restaurant       Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  customer         Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  address          CustomerAddress? @relation(fields: [addressId], references: [id], onDelete: SetNull)
-  coupon           Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  items            OrderItem[]
+  restaurant Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  customer   Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  address    CustomerAddress? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  coupon     Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items      OrderItem[]
 
-  @@map("orders")
   @@index([restaurantId])
   @@index([customerId])
   @@index([couponId])
   @@index([status])
   @@index([createdAt])
   @@index([orderNumber])
+  @@map("orders")
 }
 
 model OrderItem {
   id          String   @id @default(cuid())
   orderId     String
   productId   String
-  productName String   // Snapshot do nome
-  priceCents  Int      // Snapshot do preço
+  productName String // Snapshot do nome
+  priceCents  Int // Snapshot do preço
   quantity    Int
-  notes       String?  // Observações específicas do item
+  notes       String? // Observações específicas do item
   createdAt   DateTime @default(now())
 
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
 
-  @@map("order_items")
   @@index([orderId])
   @@index([productId])
+  @@map("order_items")
 }
 
 model Coupon {
   id            String    @id @default(cuid())
   restaurantId  String
-  code          String    // Código do cupom (ex: PRIMEIRACOMPRA, NATAL2026)
-  type          String    // "percentage" ou "fixed"
-  value         Int       // Percentual (ex: 10 = 10%) ou centavos (ex: 500 = R$5,00)
+  code          String // Código do cupom (ex: PRIMEIRACOMPRA, NATAL2026)
+  type          String // "percentage" ou "fixed"
+  value         Int // Percentual (ex: 10 = 10%) ou centavos (ex: 500 = R$5,00)
   minOrderCents Int       @default(0) // Valor mínimo do pedido em centavos
-  maxUses       Int?      // Limite total de usos (null = ilimitado)
+  maxUses       Int? // Limite total de usos (null = ilimitado)
   usedCount     Int       @default(0) // Contador de usos
   startDate     DateTime? // Data de início (null = já ativo)
   endDate       DateTime? // Data de fim (null = sem expiração)
@@ -187,12 +188,38 @@ model Coupon {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  orders        Order[]
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders     Order[]
 
-  @@map("coupons")
   @@unique([restaurantId, code]) // Código único por restaurante
   @@index([restaurantId])
   @@index([code])
   @@index([isActive])
+  @@map("coupons")
+}
+
+model Banner {
+  id              String    @id @default(cuid())
+  restaurantId    String
+  title           String
+  description     String?
+  imageUrl        String? // URL da imagem do banner
+  linkUrl         String? // Link de destino ao clicar
+  backgroundColor String    @default("#10b981") // Cor de fundo padrão (emerald-600)
+  textColor       String    @default("#ffffff") // Cor do texto padrão (branco)
+  position        String    @default("top") // top, middle, bottom
+  sortOrder       Int       @default(0)
+  startDate       DateTime? // Data de início (null = já ativo)
+  endDate         DateTime? // Data de fim (null = sem expiração)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+  @@index([isActive])
+  @@index([position])
+  @@index([sortOrder])
+  @@map("banners")
 }
