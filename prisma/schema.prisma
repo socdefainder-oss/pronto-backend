@@ -34,6 +34,7 @@ model Restaurant {
   owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   categories  Category[]
   products    Product[]
+  orders      Order[]
 
   @@map("restaurants")
   @@index([ownerId])
@@ -73,6 +74,7 @@ model Product {
 
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   category     Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems   OrderItem[]
 
   @@map("products")
   @@index([restaurantId])
@@ -80,4 +82,86 @@ model Product {
   @@index([isActive])
   @@index([sortOrder])
   @@index([createdAt])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders      Order[]
+  addresses   CustomerAddress[]
+
+  @@map("customers")
+  @@index([phone])
+}
+
+model CustomerAddress {
+  id         String   @id @default(cuid())
+  customerId String
+  street     String
+  number     String
+  complement String?
+  district   String
+  city       String
+  state      String
+  zipCode    String?
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orders     Order[]
+
+  @@map("customer_addresses")
+  @@index([customerId])
+}
+
+model Order {
+  id               String   @id @default(cuid())
+  restaurantId     String
+  customerId       String
+  addressId        String?
+  orderNumber      Int      // Número sequencial por restaurante
+  status           String   @default("pending") // pending, confirmed, preparing, ready, delivering, delivered, cancelled
+  totalCents       Int
+  deliveryFeeCents Int      @default(0)
+  paymentMethod    String?  // pix, card, cash, online
+  paymentStatus    String   @default("pending") // pending, paid, failed
+  notes            String?  // Observações do cliente
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  restaurant       Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  customer         Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  address          CustomerAddress? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  items            OrderItem[]
+
+  @@map("orders")
+  @@index([restaurantId])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String
+  productName String   // Snapshot do nome
+  priceCents  Int      // Snapshot do preço
+  quantity    Int
+  notes       String?  // Observações específicas do item
+  createdAt   DateTime @default(now())
+
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
+  @@index([orderId])
+  @@index([productId])
 }

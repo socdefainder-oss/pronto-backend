@@ -3,7 +3,8 @@ import express from "express";
 import { authRoutes } from "./routes/auth.js";
 import { restaurantRoutes } from "./routes/restaurants.js";
 import { catalogRoutes } from "./routes/catalog.js";
-import { publicRoutes } from "./routes/public.js"; // ✅ NOVO
+import { publicRoutes } from "./routes/public.js";
+import { ordersRoutes } from "./routes/orders.js";
 
 const app = express();
 
@@ -50,7 +51,8 @@ app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 app.use("/api/auth", authRoutes);
 app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/catalog", catalogRoutes);
-app.use("/api/public", publicRoutes); // ✅ NOVO
+app.use("/api/public", publicRoutes);
+app.use("/api/orders", ordersRoutes);
 
 const port = Number(process.env.PORT || 3333);
 
