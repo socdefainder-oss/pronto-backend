@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Script que garante que o banco de dados está sincronizado com o schema
- * Se as migrações falharem, tenta db push como fallback
+ * Script que garante que o banco de dados esta sincronizado com o schema
+ * Se as migracoes falharem, tenta db push como fallback
  */
 
 import { execSync } from "child_process";
@@ -13,9 +13,9 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, "..");
 
-console.log("🔄 Verificando estado do banco de dados...");
+console.log("📄 Verificando estado do banco de dados...");
 
-// Garante que o Prisma Client está gerado
+// Garante que o Prisma Client esta gerado
 try {
   console.log("📦 Gerando Prisma Client...");
   execSync("npx prisma generate", {
@@ -49,18 +49,21 @@ try {
   await prisma.$disconnect();
   console.log("✅ Migrations corrigidas!");
 } catch (fixError) {
-  console.log("⚠️  Correção de migrations pulada (normal se já corrigido)");
+  console.log("⚠️  Correcao de migrations pulada (normal se ja corrigido)");
 }
 
+try {
+  // Tenta aplicar migracoes
+  console.log("📦 Aplicando migracoes...");
   execSync("npx prisma migrate deploy --skip-generate", {
     stdio: "inherit",
     cwd: projectRoot,
     env: { ...process.env },
   });
-  console.log("✅ Migrações aplicadas com sucesso!");
+  console.log("✅ Migracoes aplicadas com sucesso!");
 } catch (migrateError) {
   console.warn("⚠️  Migrate deploy falhou, tentando db push...");
-  
+
   try {
     // Fallback: usar db push que sincroniza o schema diretamente
     console.log("🔧 Sincronizando schema com o banco...");
