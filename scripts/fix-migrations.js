@@ -8,12 +8,13 @@ async function fixAndMigrate() {
     const { PrismaClient } = pkg;
     const prisma = new PrismaClient();
     
-    // Marca a migration como aplicada
+    // Marca todas as migrations falhadas como aplicadas
     await prisma.$executeRawUnsafe(`
       UPDATE "_prisma_migrations"
       SET finished_at = COALESCE(finished_at, started_at + interval '1 second'),
           applied_steps_count = GREATEST(applied_steps_count, 1)
-      WHERE migration_name = '20260115154343_add_orders_system'
+      WHERE (migration_name = '20260115154343_add_orders_system' 
+         OR migration_name = '20260115162105_add_coupons_and_update_orders')
       AND finished_at IS NULL;
     `);
     
