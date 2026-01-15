@@ -1,4 +1,4 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import express from "express";
 import { authRoutes } from "./routes/auth.js";
 import { restaurantRoutes } from "./routes/restaurants.js";
@@ -6,6 +6,7 @@ import { catalogRoutes } from "./routes/catalog.js";
 import { publicRoutes } from "./routes/public.js";
 import { ordersRoutes } from "./routes/orders.js";
 import couponsRoutes from "./routes/coupons.js";
+import bannersRoutes from "./routes/banners.js";
 
 const app = express();
 
@@ -15,7 +16,7 @@ const app = express();
 app.use(express.json());
 
 /**
- * CORS - Middleware customizado para máximo controle
+ * CORS - Middleware customizado para mÃ¡ximo controle
  */
 const corsOrigin = process.env.CORS_ORIGIN || "https://pronto-frontend-rust.vercel.app";
 const allowedOrigins = corsOrigin.split(",").map(s => s.trim()).filter(Boolean);
@@ -23,7 +24,7 @@ const allowedOrigins = corsOrigin.split(",").map(s => s.trim()).filter(Boolean);
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   
-  // Permite se "*" ou se origin está na lista
+  // Permite se "*" ou se origin estÃ¡ na lista
   if (corsOrigin === "*" || allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin || "*");
     res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -55,10 +56,12 @@ app.use("/api/catalog", catalogRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/orders", ordersRoutes);
 app.use("/api/coupons", couponsRoutes);
+app.use("/api/banners", bannersRoutes);
 
 const port = Number(process.env.PORT || 3333);
 
 app.listen(port, () => {
-  console.log(`✅ pronto-backend rodando na porta ${port}`);
-  console.log(`🔐 CORS configurado para: ${corsOrigin}`);
+  console.log(`âœ… pronto-backend rodando na porta ${port}`);
+  console.log(`ðŸ” CORS configurado para: ${corsOrigin}`);
 });
+
