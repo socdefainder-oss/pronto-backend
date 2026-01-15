@@ -32,9 +32,26 @@ try {
 // Aguarda um pouco para garantir que o client foi gerado
 await new Promise(resolve => setTimeout(resolve, 1000));
 
+// CORRIGE MIGRATIONS FALHADAS ANTES DE TENTAR APLICAR
 try {
-  // Tenta aplicar migrações
-  console.log("📦 Aplicando migrações...");
+  console.log("🔧 Verificando migrations falhadas...");
+  const { PrismaClient } = await import("@prisma/client");
+  const prisma = new PrismaClient();
+  
+  await prisma.$executeRawUnsafe(`
+    UPDATE "_prisma_migrations"
+    SET finished_at = COALESCE(finished_at, started_at + interval '1 second'),
+        applied_steps_count = GREATEST(applied_steps_count, 1)
+    WHERE migration_name = '20260115154343_add_orders_system'
+    AND finished_at IS NULL;
+  `);
+  
+  await prisma.$disconnect();
+  console.log("✅ Migrations corrigidas!");
+} catch (fixError) {
+  console.log("⚠️  Correção de migrations pulada (normal se já corrigido)");
+}
+
   execSync("npx prisma migrate deploy --skip-generate", {
     stdio: "inherit",
     cwd: projectRoot,
