@@ -15,6 +15,7 @@ ordersRoutes.post("/", async (req: AuthedRequest, res: Response) => {
       paymentMethod,
       notes,
       deliveryFeeCents = 0,
+      couponCode,
     } = req.body;
 
     // Validações básicas
@@ -77,13 +78,13 @@ ordersRoutes.post("/", async (req: AuthedRequest, res: Response) => {
     }
 
     // Calcular total e preparar itens
-    let totalCents = 0;
+    let subtotalCents = 0;
     const orderItems = items.map((item: any) => {
       const product = products.find((p) => p.id === item.productId);
       if (!product) throw new Error("Produto não encontrado");
 
       const itemTotal = product.priceCents * item.quantity;
-      totalCents += itemTotal;
+      subtotalCents += itemTotal;
 
       return {
         productId: product.id,
@@ -94,7 +95,53 @@ ordersRoutes.post("/", async (req: AuthedRequest, res: Response) => {
       };
     });
 
-    totalCents += deliveryFeeCents;
+    // Validar e aplicar cupom se fornecido
+    let couponId = null;
+    let discountCents = 0;
+
+    if (couponCode) {
+      const coupon = await prisma.coupon.findUnique({
+        where: {
+          restaurantId_code: {
+            restaurantId,
+            code: couponCode.toUpperCase(),
+          },
+        },
+      });
+
+      if (coupon && coupon.isActive) {
+        const now = new Date();
+        const isDateValid = 
+          (!coupon.startDate || now >= coupon.startDate) &&
+          (!coupon.endDate || now <= coupon.endDate);
+        
+        const isUsageValid = !coupon.maxUses || coupon.usedCount < coupon.maxUses;
+        const isMinOrderValid = subtotalCents >= coupon.minOrderCents;
+
+        if (isDateValid && isUsageValid && isMinOrderValid) {
+          couponId = coupon.id;
+          
+          if (coupon.type === "percentage") {
+            discountCents = Math.floor((subtotalCents * coupon.value) / 100);
+          } else {
+            discountCents = coupon.value;
+          }
+
+          // Garantir que desconto não seja maior que subtotal
+          if (discountCents > subtotalCents) {
+            discountCents = subtotalCents;
+          }
+
+          // Incrementar contador de uso do cupom
+          await prisma.coupon.update({
+            where: { id: coupon.id },
+            data: { usedCount: { increment: 1 } },
+          });
+        }
+      }
+    }
+
+    const totalCents = subtotalCents - discountCents + deliveryFeeCents;
 
     // Criar pedido
     const order = await prisma.order.create({
@@ -102,7 +149,10 @@ ordersRoutes.post("/", async (req: AuthedRequest, res: Response) => {
         restaurantId,
         customerId: existingCustomer.id,
         addressId: customerAddress?.id,
+        couponId,
         orderNumber,
+        subtotalCents,
+        discountCents,
         totalCents,
         deliveryFeeCents,
         paymentMethod,
@@ -116,6 +166,7 @@ ordersRoutes.post("/", async (req: AuthedRequest, res: Response) => {
         items: true,
         customer: true,
         address: true,
+        coupon: true,
       },
     });
 

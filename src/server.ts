@@ -5,6 +5,7 @@ import { restaurantRoutes } from "./routes/restaurants.js";
 import { catalogRoutes } from "./routes/catalog.js";
 import { publicRoutes } from "./routes/public.js";
 import { ordersRoutes } from "./routes/orders.js";
+import couponsRoutes from "./routes/coupons.js";
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/catalog", catalogRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/orders", ordersRoutes);
+app.use("/api/coupons", couponsRoutes);
 
 const port = Number(process.env.PORT || 3333);
 

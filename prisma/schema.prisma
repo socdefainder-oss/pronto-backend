@@ -35,6 +35,7 @@ model Restaurant {
   categories  Category[]
   products    Product[]
   orders      Order[]
+  coupons     Coupon[]
 
   @@map("restaurants")
   @@index([ownerId])
@@ -125,9 +126,12 @@ model Order {
   restaurantId     String
   customerId       String
   addressId        String?
+  couponId         String?
   orderNumber      Int      // Número sequencial por restaurante
   status           String   @default("pending") // pending, confirmed, preparing, ready, delivering, delivered, cancelled
-  totalCents       Int
+  subtotalCents    Int      // Total antes do desconto
+  discountCents    Int      @default(0) // Desconto aplicado pelo cupom
+  totalCents       Int      // Total final após desconto
   deliveryFeeCents Int      @default(0)
   paymentMethod    String?  // pix, card, cash, online
   paymentStatus    String   @default("pending") // pending, paid, failed
@@ -138,11 +142,13 @@ model Order {
   restaurant       Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   customer         Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
   address          CustomerAddress? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  coupon           Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull)
   items            OrderItem[]
 
   @@map("orders")
   @@index([restaurantId])
   @@index([customerId])
+  @@index([couponId])
   @@index([status])
   @@index([createdAt])
   @@index([orderNumber])
@@ -164,4 +170,29 @@ model OrderItem {
   @@map("order_items")
   @@index([orderId])
   @@index([productId])
+}
+
+model Coupon {
+  id            String    @id @default(cuid())
+  restaurantId  String
+  code          String    // Código do cupom (ex: PRIMEIRACOMPRA, NATAL2026)
+  type          String    // "percentage" ou "fixed"
+  value         Int       // Percentual (ex: 10 = 10%) ou centavos (ex: 500 = R$5,00)
+  minOrderCents Int       @default(0) // Valor mínimo do pedido em centavos
+  maxUses       Int?      // Limite total de usos (null = ilimitado)
+  usedCount     Int       @default(0) // Contador de usos
+  startDate     DateTime? // Data de início (null = já ativo)
+  endDate       DateTime? // Data de fim (null = sem expiração)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders        Order[]
+
+  @@map("coupons")
+  @@unique([restaurantId, code]) // Código único por restaurante
+  @@index([restaurantId])
+  @@index([code])
+  @@index([isActive])
 }
