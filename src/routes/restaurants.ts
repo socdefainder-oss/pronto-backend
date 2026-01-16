@@ -91,7 +91,13 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
     console.error("[PATCH /restaurants/:id] Validation failed:", parsed.error.flatten());
-    return res.status(400).json({ error: parsed.error.flatten() });
+    
+    // Retorna erro formatado de forma mais amigável
+    const errors = parsed.error.flatten();
+    const firstFieldError = errors.fieldErrors[Object.keys(errors.fieldErrors)[0]]?.[0];
+    const errorMessage = firstFieldError || "Dados inválidos";
+    
+    return res.status(400).json({ error: errorMessage, details: errors });
   }
 
   const ownerId = req.userId!;
