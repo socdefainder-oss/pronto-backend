@@ -56,6 +56,13 @@ restaurantRoutes.get("/:id", auth, async (req: AuthedRequest, res) => {
   if (!restaurant) {
     return res.status(404).json({ error: "Restaurante não encontrado ou não pertence a você" });
   }
+  
+  console.log("[GET /restaurants/:id] Restaurant fetched:", {
+    id: restaurant.id,
+    name: restaurant.name,
+    logoUrl: restaurant.logoUrl,
+    hasLogoUrl: !!restaurant.logoUrl
+  });
 
   return res.json(restaurant);
 });
@@ -82,11 +89,21 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
   });
 
   const parsed = schema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success) {
+    console.error("[PATCH /restaurants/:id] Validation failed:", parsed.error.flatten());
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
 
   const ownerId = req.userId!;
   const { id } = req.params;
   const data = parsed.data;
+  
+  console.log("[PATCH /restaurants/:id] Updating restaurant:", {
+    id,
+    ownerId,
+    logoUrl: data.logoUrl,
+    hasLogoUrl: !!data.logoUrl
+  });
 
   // Verifica se restaurante existe e pertence ao usuário
   const restaurant = await prisma.restaurant.findFirst({
@@ -109,6 +126,12 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
   const updated = await prisma.restaurant.update({
     where: { id },
     data,
+  });
+  
+  console.log("[PATCH /restaurants/:id] Restaurant updated:", {
+    id: updated.id,
+    name: updated.name,
+    logoUrl: updated.logoUrl
   });
 
   return res.json(updated);
