@@ -46,7 +46,8 @@ try {
     WHERE (migration_name = '20260115154343_add_orders_system' 
        OR migration_name = '20260115162105_add_coupons_and_update_orders'
        OR migration_name = '20260115164604_add_banners'
-       OR migration_name = '20260116135934_add_slogan_to_restaurant')
+       OR migration_name = '20260116135934_add_slogan_to_restaurant'
+       OR migration_name = '20260116182438_add_restaurant_professional_fields')
     AND finished_at IS NULL;
   `);
   
