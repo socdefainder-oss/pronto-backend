@@ -68,7 +68,17 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
     phone: z.string().min(8).optional(),
     description: z.string().optional(),
     slogan: z.string().optional(),
-    address: z.string().optional()
+    address: z.string().optional(),
+    logoUrl: z.string().url().optional().or(z.literal("")),
+    cnpj: z.string().optional(),
+    email: z.string().email().optional().or(z.literal("")),
+    openingHours: z.string().optional(),
+    deliveryFee: z.number().int().min(0).optional().or(z.null()),
+    minimumOrder: z.number().int().min(0).optional().or(z.null()),
+    estimatedDeliveryTime: z.string().optional(),
+    acceptsCard: z.boolean().optional(),
+    acceptsPix: z.boolean().optional(),
+    acceptsCash: z.boolean().optional()
   });
 
   const parsed = schema.safeParse(req.body);

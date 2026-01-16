@@ -29,6 +29,16 @@ model Restaurant {
   description String?
   slogan      String? // Frase motivadora/tagline do restaurante
   address     String?
+  logoUrl     String? // URL da logo/imagem do restaurante
+  cnpj        String? // CNPJ do estabelecimento
+  email       String? // Email de contato
+  openingHours String? // Horário de funcionamento (ex: "Seg-Sex: 10h-22h")
+  deliveryFee  Int?    // Taxa de entrega em centavos
+  minimumOrder Int?    // Pedido mínimo em centavos
+  estimatedDeliveryTime String? // Tempo estimado (ex: "30-45 min")
+  acceptsCard  Boolean @default(false) // Aceita cartão
+  acceptsPix   Boolean @default(false) // Aceita PIX
+  acceptsCash  Boolean @default(true)  // Aceita dinheiro
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
