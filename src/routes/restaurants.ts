@@ -67,6 +67,7 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
     slug: z.string().min(2).regex(/^[a-z0-9-]+$/).optional(),
     phone: z.string().min(8).optional(),
     description: z.string().optional(),
+    slogan: z.string().optional(),
     address: z.string().optional()
   });
 

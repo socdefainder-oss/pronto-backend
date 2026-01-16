@@ -27,6 +27,7 @@ model Restaurant {
   slug        String   @unique
   phone       String // WhatsApp (ex: 5511999999999)
   description String?
+  slogan      String? // Frase motivadora/tagline do restaurante
   address     String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

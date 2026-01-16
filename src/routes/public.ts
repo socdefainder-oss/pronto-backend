@@ -50,6 +50,7 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
       slug: restaurant.slug,
       phone: restaurant.phone,
       description: restaurant.description,
+      slogan: restaurant.slogan,
       address: restaurant.address,
       createdAt: restaurant.createdAt,
       updatedAt: restaurant.updatedAt,
