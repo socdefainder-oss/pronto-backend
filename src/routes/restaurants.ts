@@ -94,7 +94,9 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
     
     // Retorna erro formatado de forma mais amigável
     const errors = parsed.error.flatten();
-    const firstFieldError = errors.fieldErrors[Object.keys(errors.fieldErrors)[0]]?.[0];
+    const fieldErrorKeys = Object.keys(errors.fieldErrors);
+    const firstFieldKey = fieldErrorKeys[0];
+    const firstFieldError = firstFieldKey ? (errors.fieldErrors as any)[firstFieldKey]?.[0] : undefined;
     const errorMessage = firstFieldError || "Dados inválidos";
     
     return res.status(400).json({ error: errorMessage, details: errors });
