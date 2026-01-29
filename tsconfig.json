@@ -9,5 +9,6 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": ["scripts", "node_modules", "dist"]
 }
