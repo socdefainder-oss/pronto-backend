@@ -7,6 +7,7 @@ import { publicRoutes } from "./routes/public.js";
 import { ordersRoutes } from "./routes/orders.js";
 import couponsRoutes from "./routes/coupons.js";
 import bannersRoutes from "./routes/banners.js";
+import { adminRoutes } from "./routes/admin.js";
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use("/api/public", publicRoutes);
 app.use("/api/orders", ordersRoutes);
 app.use("/api/coupons", couponsRoutes);
 app.use("/api/banners", bannersRoutes);
+app.use("/api/admin", adminRoutes);
 
 const port = Number(process.env.PORT || 3333);
 

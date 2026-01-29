@@ -41,10 +41,12 @@ authRoutes.post("/login", async (req, res) => {
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return res.status(401).json({ error: "Credenciais inválidas" });
+  
+  if (!user.isActive) return res.status(403).json({ error: "Usuário bloqueado" });
 
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return res.status(401).json({ error: "Credenciais inválidas" });
 
-  const token = signToken({ userId: user.id });
-  return res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+  const token = signToken({ userId: user.id, role: user.role });
+  return res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 });

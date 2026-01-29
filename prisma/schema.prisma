@@ -12,6 +12,8 @@ model User {
   name      String
   email     String   @unique
   password  String
+  role      String   @default("user") // "user" or "admin"
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -39,6 +41,7 @@ model Restaurant {
   acceptsCard  Boolean @default(false) // Aceita cartão
   acceptsPix   Boolean @default(false) // Aceita PIX
   acceptsCash  Boolean @default(true)  // Aceita dinheiro
+  isActive    Boolean @default(true)  // Restaurante ativo/bloqueado
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
