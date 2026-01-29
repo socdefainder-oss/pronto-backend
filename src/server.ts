@@ -8,6 +8,7 @@ import { ordersRoutes } from "./routes/orders.js";
 import couponsRoutes from "./routes/coupons.js";
 import bannersRoutes from "./routes/banners.js";
 import { adminRoutes } from "./routes/admin.js";
+import { ensureAdminExists } from "./lib/ensureAdmin.js";
 
 const app = express();
 
@@ -63,9 +64,12 @@ app.use("/api/admin", adminRoutes);
 
 const port = Number(process.env.PORT || 3333);
 
-app.listen(port, () => {
-  console.log(`âœ… pronto-backend rodando na porta ${port}`);
-  console.log(`ðŸ” CORS configurado para: ${corsOrigin}`);
+app.listen(port, async () => {
+  console.log(`✅ pronto-backend rodando na porta ${port}`);
+  console.log(`🔒 CORS configurado para: ${corsOrigin}`);
+  
+  // Garante que o admin existe no banco
+  await ensureAdminExists();
 });
 
 
