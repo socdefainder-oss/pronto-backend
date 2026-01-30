@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
-import { auth } from "../middlewares/auth";
+import { auth, type AuthedRequest } from "../middlewares/auth";
 
 const router = Router();
 
 // Obter pedidos da cozinha de um restaurante
-router.get("/:restaurantId/orders", auth, async (req, res) => {
+router.get("/:restaurantId/orders", auth, async (req: AuthedRequest, res) => {
   try {
     const { restaurantId } = req.params;
     const { status, category } = req.query;
@@ -14,7 +14,7 @@ router.get("/:restaurantId/orders", auth, async (req, res) => {
     const restaurant = await prisma.restaurant.findFirst({
       where: {
         id: restaurantId,
-        userId: req.userId,
+        userId: req.userId!,
       },
     });
 
@@ -60,7 +60,7 @@ router.get("/:restaurantId/orders", auth, async (req, res) => {
             id: true,
             street: true,
             number: true,
-            neighborhood: true,
+            district: true,
             city: true,
             state: true,
             zipCode: true,
@@ -89,7 +89,7 @@ router.get("/:restaurantId/orders", auth, async (req, res) => {
 });
 
 // Atualizar status de um pedido
-router.patch("/orders/:id/status", auth, async (req, res) => {
+router.patch("/orders/:id/status", auth, async (req: AuthedRequest, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -99,7 +99,7 @@ router.patch("/orders/:id/status", auth, async (req, res) => {
       where: {
         id,
         restaurant: {
-          userId: req.userId,
+          userId: req.userId!,
         },
       },
     });
@@ -141,7 +141,7 @@ router.patch("/orders/:id/status", auth, async (req, res) => {
 });
 
 // Atualizar prioridade de um pedido
-router.patch("/orders/:id/priority", auth, async (req, res) => {
+router.patch("/orders/:id/priority", auth, async (req: AuthedRequest, res) => {
   try {
     const { id } = req.params;
     const { priority } = req.body;
@@ -151,7 +151,7 @@ router.patch("/orders/:id/priority", auth, async (req, res) => {
       where: {
         id,
         restaurant: {
-          userId: req.userId,
+          userId: req.userId!,
         },
       },
     });
@@ -173,7 +173,7 @@ router.patch("/orders/:id/priority", auth, async (req, res) => {
 });
 
 // Atualizar observações da cozinha
-router.patch("/orders/:id/notes", auth, async (req, res) => {
+router.patch("/orders/:id/notes", auth, async (req: AuthedRequest, res) => {
   try {
     const { id } = req.params;
     const { kitchenNotes } = req.body;
@@ -183,7 +183,7 @@ router.patch("/orders/:id/notes", auth, async (req, res) => {
       where: {
         id,
         restaurant: {
-          userId: req.userId,
+          userId: req.userId!,
         },
       },
     });
@@ -205,7 +205,7 @@ router.patch("/orders/:id/notes", auth, async (req, res) => {
 });
 
 // Obter estatísticas da cozinha
-router.get("/:restaurantId/stats", auth, async (req, res) => {
+router.get("/:restaurantId/stats", auth, async (req: AuthedRequest, res) => {
   try {
     const { restaurantId } = req.params;
 
@@ -213,7 +213,7 @@ router.get("/:restaurantId/stats", auth, async (req, res) => {
     const restaurant = await prisma.restaurant.findFirst({
       where: {
         id: restaurantId,
-        userId: req.userId,
+        userId: req.userId!,
       },
     });
 
