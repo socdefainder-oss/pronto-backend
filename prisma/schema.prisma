@@ -144,6 +144,7 @@ model Order {
   couponId         String?
   orderNumber      Int // Número sequencial por restaurante
   status           String   @default("pending") // pending, confirmed, preparing, ready, delivering, delivered, cancelled
+  priority         String   @default("normal") // normal, urgent
   subtotalCents    Int // Total antes do desconto
   discountCents    Int      @default(0) // Desconto aplicado pelo cupom
   totalCents       Int // Total final após desconto
@@ -151,6 +152,9 @@ model Order {
   paymentMethod    String? // pix, card, cash, online
   paymentStatus    String   @default("pending") // pending, paid, failed
   notes            String? // Observações do cliente
+  kitchenNotes     String? // Observações da cozinha
+  prepStartedAt    DateTime? // Quando começou a preparação
+  readyAt          DateTime? // Quando ficou pronto
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
