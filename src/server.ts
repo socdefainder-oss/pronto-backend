@@ -9,6 +9,7 @@ import couponsRoutes from "./routes/coupons.js";
 import bannersRoutes from "./routes/banners.js";
 import { adminRoutes } from "./routes/admin.js";
 import kitchenRoutes from "./routes/kitchen.js";
+import analyticsRoutes from "./routes/analytics.js";
 import { ensureAdminExists } from "./lib/ensureAdmin.js";
 
 const app = express();
@@ -63,6 +64,7 @@ app.use("/api/coupons", couponsRoutes);
 app.use("/api/banners", bannersRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/kitchen", kitchenRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 const port = Number(process.env.PORT || 3333);
 
