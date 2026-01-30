@@ -14,7 +14,7 @@ router.get("/:restaurantId/orders", auth, async (req: AuthedRequest, res) => {
     const restaurant = await prisma.restaurant.findFirst({
       where: {
         id: restaurantId,
-        userId: req.userId!,
+        ownerId: req.userId!,
       },
     });
 
@@ -43,7 +43,12 @@ router.get("/:restaurantId/orders", auth, async (req: AuthedRequest, res) => {
               select: {
                 id: true,
                 name: true,
-                category: true,
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -75,9 +80,12 @@ router.get("/:restaurantId/orders", auth, async (req: AuthedRequest, res) => {
 
     // Filtrar por categoria se solicitado
     let filteredOrders = orders;
-    if (category) {
+    if (category && typeof category === 'string') {
       filteredOrders = orders.filter((order) =>
-        order.items.some((item) => item.product.category === category)
+        order.items.some((item) => 
+          item.product.category?.id === category || 
+          item.product.category?.name === category
+        )
       );
     }
 
@@ -99,7 +107,7 @@ router.patch("/orders/:id/status", auth, async (req: AuthedRequest, res) => {
       where: {
         id,
         restaurant: {
-          userId: req.userId!,
+          ownerId: req.userId!,
         },
       },
     });
@@ -151,7 +159,7 @@ router.patch("/orders/:id/priority", auth, async (req: AuthedRequest, res) => {
       where: {
         id,
         restaurant: {
-          userId: req.userId!,
+          ownerId: req.userId!,
         },
       },
     });
@@ -183,7 +191,7 @@ router.patch("/orders/:id/notes", auth, async (req: AuthedRequest, res) => {
       where: {
         id,
         restaurant: {
-          userId: req.userId!,
+          ownerId: req.userId!,
         },
       },
     });
@@ -213,7 +221,7 @@ router.get("/:restaurantId/stats", auth, async (req: AuthedRequest, res) => {
     const restaurant = await prisma.restaurant.findFirst({
       where: {
         id: restaurantId,
-        userId: req.userId!,
+        ownerId: req.userId!,
       },
     });
 
