@@ -18,7 +18,7 @@ async function fixAndMigrate() {
          OR migration_name = '20260115164604_add_banners'
          OR migration_name = '20260116135934_add_slogan_to_restaurant'
          OR migration_name = '20260116182438_add_restaurant_professional_fields'
-         OR migration_name = '20260202175015_add_restaurant_settings_fields')
+         OR migration_name = '20260202193430_add_settings_fields_v2')
       AND finished_at IS NULL;
     `);
     
