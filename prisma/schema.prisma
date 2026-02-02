@@ -171,7 +171,8 @@ model Order {
   totalCents       Int // Total final após desconto
   deliveryFeeCents Int      @default(0)
   paymentMethod    String? // pix, card, cash, online
-  paymentStatus    String   @default("pending") // pending, paid, failed
+  paymentStatus    String   @default("pending") // pending, paid, failed, approved, rejected
+  paymentId        String? // ID do pagamento no gateway (Mercado Pago preference_id ou payment_id)
   notes            String? // Observações do cliente
   kitchenNotes     String? // Observações da cozinha
   prepStartedAt    DateTime? // Quando começou a preparação
