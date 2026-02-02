@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { mercadopago } from "../lib/mercadopago.js";
+import { preference, payment } from "../lib/mercadopago.js";
 
 export const paymentRoutes = Router();
 
@@ -39,7 +39,7 @@ paymentRoutes.post("/create", async (req, res) => {
     }
 
     // Criar preferência no Mercado Pago
-    const preference = {
+    const preferenceData = {
       items: order.items.map(item => ({
         title: item.product.name,
         quantity: item.quantity,
@@ -67,21 +67,21 @@ paymentRoutes.post("/create", async (req, res) => {
       },
     };
 
-    const response = await mercadopago.preferences.create(preference);
+    const response = await preference.create({ body: preferenceData });
 
     // Atualizar pedido com preference_id
     await prisma.order.update({
       where: { id: orderId },
       data: {
-        paymentId: response.body.id,
+        paymentId: response.id,
         paymentStatus: 'pending',
       },
     });
 
     return res.json({
-      preferenceId: response.body.id,
-      initPoint: response.body.init_point,
-      sandboxInitPoint: response.body.sandbox_init_point,
+      preferenceId: response.id,
+      initPoint: response.init_point,
+      sandboxInitPoint: response.sandbox_init_point,
     });
   } catch (error: any) {
     console.error("[CREATE PAYMENT] Erro:", error);
@@ -100,19 +100,19 @@ paymentRoutes.post("/webhook", async (req, res) => {
       const paymentId = data.id;
 
       // Buscar informações do pagamento
-      const payment = await mercadopago.payment.findById(paymentId);
-      const externalReference = payment.body.external_reference; // orderId
+      const paymentData = await payment.get({ id: paymentId });
+      const externalReference = paymentData.external_reference; // orderId
 
       console.log("[WEBHOOK MP] Pagamento:", {
         id: paymentId,
-        status: payment.body.status,
+        status: paymentData.status,
         orderId: externalReference,
       });
 
       // Atualizar status do pedido
       if (externalReference) {
         let newStatus = 'pending';
-        let newPaymentStatus = payment.body.status;
+        let newPaymentStatus = paymentData.status;
 
         if (payment.body.status === 'approved') {
           newStatus = 'preparing'; // Pedido aprovado vai para cozinha
@@ -168,12 +168,12 @@ paymentRoutes.get("/status/:orderId", async (req, res) => {
     let paymentDetails = null;
     if (order.paymentId) {
       try {
-        const payment = await mercadopago.payment.findById(Number(order.paymentId));
+        const paymentData = await payment.get({ id: Number(order.paymentId) });
         paymentDetails = {
-          status: payment.body.status,
-          statusDetail: payment.body.status_detail,
-          paymentMethod: payment.body.payment_method_id,
-          transactionAmount: payment.body.transaction_amount,
+          status: paymentData.status,
+          statusDetail: paymentData.status_detail,
+          paymentMethod: paymentData.payment_method_id,
+          transactionAmount: paymentData.transaction_amount,
         };
       } catch (err) {
         console.error("[PAYMENT STATUS] Erro ao buscar no MP:", err);
