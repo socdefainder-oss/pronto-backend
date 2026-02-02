@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node scripts/fix-migrations.js && node dist/server.js",
+    "start": "node scripts/pre-migrate.js && npx prisma migrate deploy && node scripts/fix-migrations.js && node dist/server.js",
     "postinstall": "node scripts/ensure-db.js",
     "fix:migrations": "node scripts/fix-migrations.js",
     "pre:migrate": "node scripts/pre-migrate.js",
