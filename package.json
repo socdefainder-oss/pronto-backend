@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node scripts/deploy.js",
+    "start": "node scripts/deploy.cjs",
     "start:server": "node dist/server.js",
     "postinstall": "node scripts/ensure-db.js",
     "fix:migrations": "node scripts/fix-migrations.js",
