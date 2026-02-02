@@ -9,6 +9,8 @@
     "start": "node scripts/fix-migrations.js && node dist/server.js",
     "postinstall": "node scripts/ensure-db.js",
     "fix:migrations": "node scripts/fix-migrations.js",
+    "pre:migrate": "node scripts/pre-migrate.js",
+    "migrate": "node scripts/pre-migrate.js && npx prisma migrate deploy",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy"
   },

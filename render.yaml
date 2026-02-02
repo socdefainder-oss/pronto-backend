@@ -3,7 +3,7 @@ services:
     name: pronto-backend
     env: node
     plan: free
-    buildCommand: npx prisma generate && npm run fix:migrations && npx prisma migrate deploy && npm run build
+    buildCommand: npx prisma generate && npm run pre:migrate && npx prisma migrate deploy && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
