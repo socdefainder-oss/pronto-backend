@@ -1,6 +1,6 @@
 // Script completo de deploy - deleta migrations falhadas, aplica migrations e inicia servidor
-import { PrismaClient } from '@prisma/client';
-import { spawn } from 'child_process';
+const { PrismaClient } = require('@prisma/client');
+const { spawn } = require('child_process');
 
 async function deploy() {
   console.log('🚀 [DEPLOY] Iniciando processo de deploy...');
