@@ -1,4 +1,4 @@
-// Script para rodar ANTES do migrate deploy - marca migrations falhadas como completas
+// Script para rodar ANTES do migrate deploy - deleta migrations falhadas
 async function preMigrate() {
   console.log('🔧 [PRE-MIGRATE] Verificando migrations falhadas...');
   
@@ -8,17 +8,15 @@ async function preMigrate() {
     const { PrismaClient } = pkg;
     const prisma = new PrismaClient();
     
-    // Marca todas as migrations falhadas como aplicadas
+    // DELETA migrations falhadas para que possam ser reaplicadas
     const result = await prisma.$executeRawUnsafe(`
-      UPDATE "_prisma_migrations"
-      SET finished_at = COALESCE(finished_at, started_at + interval '1 second'),
-          applied_steps_count = GREATEST(applied_steps_count, 1)
+      DELETE FROM "_prisma_migrations"
       WHERE finished_at IS NULL
       RETURNING migration_name;
     `);
     
     if (result && result.length > 0) {
-      console.log('✅ [PRE-MIGRATE] Migrations corrigidas:', result.map(r => r.migration_name).join(', '));
+      console.log('✅ [PRE-MIGRATE] Migrations falhadas deletadas (serão reaplicadas):', result.map(r => r.migration_name).join(', '));
     } else {
       console.log('✅ [PRE-MIGRATE] Nenhuma migration falhada encontrada.');
     }
