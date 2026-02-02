@@ -30,6 +30,7 @@ paymentRoutes.post("/create", async (req, res) => {
           },
         },
         restaurant: true,
+        customer: true,
       },
     });
 
@@ -46,10 +47,10 @@ paymentRoutes.post("/create", async (req, res) => {
         currency_id: 'BRL',
       })),
       payer: {
-        name: order.customerName,
-        email: order.customerEmail || 'cliente@pronto.app',
+        name: order.customer.name,
+        email: order.customer.email || 'cliente@pronto.app',
         phone: {
-          number: order.customerPhone || '',
+          number: order.customer.phone || '',
         },
       },
       back_urls: {
