@@ -42,6 +42,27 @@ model Restaurant {
   acceptsPix   Boolean @default(false) // Aceita PIX
   acceptsCash  Boolean @default(true)  // Aceita dinheiro
   isActive    Boolean @default(true)  // Restaurante ativo/bloqueado
+  
+  // Novos campos
+  brandName           String? // Nome da marca
+  unitName            String? // Nome da unidade
+  acceptsDelivery     Boolean @default(true) // Aceita delivery
+  minDeliveryValue    String? // Valor mínimo para delivery
+  freeDeliveryFrom    String? // Frete grátis a partir de
+  acceptsPickup       Boolean @default(true) // Aceita retirada
+  pickupMinTime       String? // Tempo mínimo de retirada
+  pickupMaxTime       String? // Tempo máximo de retirada
+  acceptsDineIn       Boolean @default(false) // Aceita consumo no local
+  acceptsScheduled    Boolean @default(false) // Aceita agendamento
+  useReadyColumn      Boolean @default(true) // Usa coluna "Pronto"
+  useCompletedColumn  Boolean @default(true) // Usa coluna "Finalizados"
+  companyName         String? // Razão social
+  cnpjStatus          String? // Situação cadastral
+  cnae                String? // CNAE
+  isMEI               String? // MEI
+  cnpjValid           Boolean @default(false) // CNPJ válido
+  cnpjAnalyzedAt      String? // Data da análise do CNPJ
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

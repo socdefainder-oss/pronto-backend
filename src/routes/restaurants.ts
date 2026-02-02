@@ -85,7 +85,27 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
     estimatedDeliveryTime: z.string().optional().nullable(),
     acceptsCard: z.boolean().optional(),
     acceptsPix: z.boolean().optional(),
-    acceptsCash: z.boolean().optional()
+    acceptsCash: z.boolean().optional(),
+    
+    // Novos campos
+    brandName: z.string().optional().nullable(),
+    unitName: z.string().optional().nullable(),
+    acceptsDelivery: z.boolean().optional(),
+    minDeliveryValue: z.string().optional().nullable(),
+    freeDeliveryFrom: z.string().optional().nullable(),
+    acceptsPickup: z.boolean().optional(),
+    pickupMinTime: z.string().optional().nullable(),
+    pickupMaxTime: z.string().optional().nullable(),
+    acceptsDineIn: z.boolean().optional(),
+    acceptsScheduled: z.boolean().optional(),
+    useReadyColumn: z.boolean().optional(),
+    useCompletedColumn: z.boolean().optional(),
+    companyName: z.string().optional().nullable(),
+    cnpjStatus: z.string().optional().nullable(),
+    cnae: z.string().optional().nullable(),
+    isMEI: z.string().optional().nullable(),
+    cnpjValid: z.boolean().optional(),
+    cnpjAnalyzedAt: z.string().optional().nullable(),
   });
 
   const parsed = schema.safeParse(req.body);
