@@ -40,7 +40,8 @@ paymentRoutes.post("/create", async (req, res) => {
 
     // Criar preferência no Mercado Pago
     const preferenceData = {
-      items: order.items.map(item => ({
+      items: order.items.map((item, index) => ({
+        id: `item-${index}`,
         title: item.product.name,
         quantity: item.quantity,
         unit_price: item.priceCents / 100,
@@ -114,10 +115,10 @@ paymentRoutes.post("/webhook", async (req, res) => {
         let newStatus = 'pending';
         let newPaymentStatus = paymentData.status;
 
-        if (payment.body.status === 'approved') {
+        if (paymentData.status === 'approved') {
           newStatus = 'preparing'; // Pedido aprovado vai para cozinha
           newPaymentStatus = 'approved';
-        } else if (payment.body.status === 'rejected') {
+        } else if (paymentData.status === 'rejected') {
           newPaymentStatus = 'rejected';
         }
 
