@@ -72,7 +72,7 @@ router.get('/:orderId', async (req, res) => {
         priceCents: item.priceCents,
         productName: item.product.name,
         productImage: item.product.imageUrl,
-        observations: item.observations,
+        observations: item.notes,
       })),
     });
   } catch (error) {
