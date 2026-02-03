@@ -1,7 +1,11 @@
 import axios from 'axios';
 
-const ASAAS_API_KEY = process.env.ASAAS_API_KEY || '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmM0MjMzMDZkLTVlYjMtNDk0OC1iYTNjLWFkNzVmZTEyMjMyNjo6JGFhY2hfOWY5OGUxZTUtZmRhNi00OGUzLTg5MjgtMGNlNjRmYTViMGVj';
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3';
+
+if (!ASAAS_API_KEY) {
+  console.error('❌ ERRO: ASAAS_API_KEY não configurada! Configure a variável de ambiente.');
+}
 
 const asaasApi = axios.create({
   baseURL: ASAAS_BASE_URL,
