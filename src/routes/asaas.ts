@@ -80,14 +80,34 @@ router.post('/create', async (req, res) => {
         ccv: cardData.ccv,
       };
 
+      // Garantir que todos os campos obrigatórios estejam presentes
+      const cpfCnpj = (cardData.holderInfo?.cpfCnpj || order.customer.cpfCnpj || '').replace(/\D/g, '');
+      const postalCode = (order.address?.zipCode || '').replace(/\D/g, '');
+      const addressNumber = order.address?.number || 'S/N';
+      const phone = (order.customer.phone || '').replace(/\D/g, '');
+
+      if (!cpfCnpj || cpfCnpj.length < 11) {
+        return res.status(400).json({ error: 'CPF/CNPJ é obrigatório para pagamento com cartão' });
+      }
+
+      if (!postalCode || postalCode.length !== 8) {
+        return res.status(400).json({ error: 'CEP válido é obrigatório para pagamento com cartão. Por favor, preencha o endereço.' });
+      }
+
+      if (!phone || phone.length < 10) {
+        return res.status(400).json({ error: 'Telefone válido é obrigatório para pagamento com cartão' });
+      }
+
       chargeData.creditCardHolderInfo = {
         name: order.customer.name,
         email: order.customer.email || 'nao-informado@email.com',
-        cpfCnpj: cardData.holderInfo?.cpfCnpj || order.customer.cpfCnpj || '00000000000',
-        postalCode: order.address?.zipCode?.replace(/\D/g, '') || '00000000',
-        addressNumber: order.address?.number || '0',
-        phone: order.customer.phone?.replace(/\D/g, '') || '00000000000',
+        cpfCnpj: cpfCnpj,
+        postalCode: postalCode,
+        addressNumber: addressNumber,
+        phone: phone,
       };
+
+      console.log('Dados do titular do cartão:', JSON.stringify(chargeData.creditCardHolderInfo, null, 2));
     }
 
     // Criar cobrança no ASAAS
