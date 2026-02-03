@@ -102,7 +102,7 @@ router.post('/create', async (req, res) => {
       }
 
       chargeData.creditCardHolderInfo = {
-        name: order.customer.name,
+        name: cardData.holderName, // Usar o nome do cartão, não do cliente
         email: order.customer.email || 'nao-informado@email.com',
         cpfCnpj: cpfCnpj,
         postalCode: postalCode,
@@ -110,6 +110,7 @@ router.post('/create', async (req, res) => {
         phone: phone,
       };
 
+      console.log('Dados do cartão:', JSON.stringify(chargeData.creditCard, null, 2));
       console.log('Dados do titular do cartão:', JSON.stringify(chargeData.creditCardHolderInfo, null, 2));
     }
 
