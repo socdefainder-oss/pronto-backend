@@ -2,7 +2,6 @@
   "name": "pronto-backend",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "npm install && npx --yes prisma@5.18.0 generate && tsc -p tsconfig.json",
