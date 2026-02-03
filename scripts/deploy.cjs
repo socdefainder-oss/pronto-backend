@@ -5,6 +5,25 @@ const { spawn } = require('child_process');
 async function deploy() {
   console.log('🚀 [DEPLOY] Iniciando processo de deploy...');
   
+  // 0. Build do TypeScript
+  console.log('🔨 [DEPLOY] Compilando TypeScript...');
+  const build = spawn('npm', ['run', 'build'], {
+    stdio: 'inherit',
+    shell: true
+  });
+  
+  await new Promise((resolve, reject) => {
+    build.on('close', (code) => {
+      if (code !== 0) {
+        console.error('❌ [DEPLOY] Erro ao compilar TypeScript!');
+        reject(new Error('Build failed'));
+      } else {
+        console.log('✅ [DEPLOY] TypeScript compilado com sucesso!');
+        resolve();
+      }
+    });
+  });
+  
   try {
     const prisma = new PrismaClient();
     
