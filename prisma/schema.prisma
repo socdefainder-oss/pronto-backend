@@ -122,17 +122,20 @@ model Product {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String
-  email     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  phone            String
+  email            String?
+  cpfCnpj          String? // CPF ou CNPJ do cliente
+  asaasCustomerId  String? // ID do cliente no ASAAS
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   orders    Order[]
   addresses CustomerAddress[]
 
   @@index([phone])
+  @@index([asaasCustomerId])
   @@map("customers")
 }
 
