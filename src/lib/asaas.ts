@@ -54,11 +54,16 @@ export interface CreateCustomerData {
 
 export async function createCustomer(data: CreateCustomerData) {
   try {
+    console.log('Criando cliente no ASAAS com dados:', JSON.stringify(data, null, 2));
     const response = await asaasApi.post('/customers', data);
+    console.log('Cliente criado com sucesso:', response.data.id);
     return response.data;
   } catch (error: any) {
-    console.error('Erro ao criar cliente no ASAAS:', error.response?.data || error.message);
-    throw new Error('Falha ao criar cliente no ASAAS');
+    console.error('Erro ao criar cliente no ASAAS:');
+    console.error('Status:', error.response?.status);
+    console.error('Data:', JSON.stringify(error.response?.data, null, 2));
+    console.error('Message:', error.message);
+    throw new Error(`Falha ao criar cliente no ASAAS: ${JSON.stringify(error.response?.data || error.message)}`);
   }
 }
 

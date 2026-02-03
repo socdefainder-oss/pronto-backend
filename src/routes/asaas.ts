@@ -83,7 +83,7 @@ router.post('/create', async (req, res) => {
       chargeData.creditCardHolderInfo = {
         name: order.customer.name,
         email: order.customer.email || 'nao-informado@email.com',
-        cpfCnpj: cardData.cpfCnpj || order.customer.cpfCnpj || '00000000000',
+        cpfCnpj: cardData.holderInfo?.cpfCnpj || order.customer.cpfCnpj || '00000000000',
         postalCode: order.address?.zipCode?.replace(/\D/g, '') || '00000000',
         addressNumber: order.address?.number || '0',
         phone: order.customer.phone?.replace(/\D/g, '') || '00000000000',
