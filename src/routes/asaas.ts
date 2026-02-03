@@ -82,16 +82,22 @@ router.post('/create', async (req, res) => {
 
       // Garantir que todos os campos obrigatórios estejam presentes
       const cpfCnpj = (cardData.holderInfo?.cpfCnpj || order.customer.cpfCnpj || '').replace(/\D/g, '');
-      const postalCode = (order.address?.zipCode || '').replace(/\D/g, '');
-      const addressNumber = order.address?.number || 'S/N';
+      let postalCode = (order.address?.zipCode || '').replace(/\D/g, '');
+      let addressNumber = order.address?.number || 'S/N';
       const phone = (order.customer.phone || '').replace(/\D/g, '');
+
+      // Se não tem CEP do cliente (retirada), usar CEP do restaurante
+      if (!postalCode || postalCode.length !== 8) {
+        postalCode = (order.restaurant.zipCode || '').replace(/\D/g, '');
+        addressNumber = order.restaurant.addressNumber || 'S/N';
+      }
 
       if (!cpfCnpj || cpfCnpj.length < 11) {
         return res.status(400).json({ error: 'CPF/CNPJ é obrigatório para pagamento com cartão' });
       }
 
       if (!postalCode || postalCode.length !== 8) {
-        return res.status(400).json({ error: 'CEP válido é obrigatório para pagamento com cartão. Por favor, preencha o endereço.' });
+        return res.status(400).json({ error: 'CEP do restaurante não configurado. Entre em contato com o estabelecimento.' });
       }
 
       if (!phone || phone.length < 10) {
