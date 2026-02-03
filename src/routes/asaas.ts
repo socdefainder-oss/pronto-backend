@@ -29,7 +29,7 @@ router.post('/create', async (req, res) => {
     let asaasCustomerId = order.customer.asaasCustomerId;
     
     if (!asaasCustomerId) {
-      const customerData = {
+      const customerData: any = {
         name: order.customer.name,
         email: order.customer.email || undefined,
         phone: order.customer.phone || undefined,
@@ -39,11 +39,11 @@ router.post('/create', async (req, res) => {
       };
 
       if (order.address) {
-        customerData['address'] = order.address.street;
-        customerData['addressNumber'] = order.address.number;
-        customerData['complement'] = order.address.complement || undefined;
-        customerData['province'] = order.address.district;
-        customerData['postalCode'] = order.address.zipCode || undefined;
+        customerData.address = order.address.street;
+        customerData.addressNumber = order.address.number;
+        customerData.complement = order.address.complement || undefined;
+        customerData.province = order.address.district;
+        customerData.postalCode = order.address.zipCode || undefined;
       }
 
       const asaasCustomer = await createCustomer(customerData);
