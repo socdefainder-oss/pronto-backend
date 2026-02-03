@@ -12,6 +12,7 @@ import kitchenRoutes from "./routes/kitchen.js";
 import analyticsRoutes from "./routes/analytics.js";
 import asaasRoutes from "./routes/asaas.js";
 import webhooksRoutes from "./routes/webhooks.js";
+import trackingRoutes from "./routes/tracking.js";
 import { ensureAdminExists } from "./lib/ensureAdmin.js";
 
 const app = express();
@@ -69,6 +70,7 @@ app.use("/api/kitchen", kitchenRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/asaas", asaasRoutes);
 app.use("/api/webhooks", webhooksRoutes);
+app.use("/api/tracking", trackingRoutes);
 
 const port = Number(process.env.PORT || 3333);
 
