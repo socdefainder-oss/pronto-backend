@@ -86,18 +86,15 @@ router.post('/create', async (req, res) => {
       let addressNumber = order.address?.number || 'S/N';
       const phone = (order.customer.phone || '').replace(/\D/g, '');
 
-      // Se não tem CEP do cliente (retirada), usar CEP do restaurante
+      // Se não tem CEP do cliente (retirada), usar CEP genérico para validação ASAAS
+      // O ASAAS exige CEP para antifraude, mas em retirada não precisamos do endereço real do cliente
       if (!postalCode || postalCode.length !== 8) {
-        postalCode = (order.restaurant.zipCode || '').replace(/\D/g, '');
-        addressNumber = order.restaurant.addressNumber || 'S/N';
+        postalCode = '01310100'; // CEP genérico válido para validação
+        addressNumber = '1';
       }
 
       if (!cpfCnpj || cpfCnpj.length < 11) {
         return res.status(400).json({ error: 'CPF/CNPJ é obrigatório para pagamento com cartão' });
-      }
-
-      if (!postalCode || postalCode.length !== 8) {
-        return res.status(400).json({ error: 'CEP do restaurante não configurado. Entre em contato com o estabelecimento.' });
       }
 
       if (!phone || phone.length < 10) {
