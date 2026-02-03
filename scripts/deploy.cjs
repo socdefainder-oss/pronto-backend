@@ -7,7 +7,7 @@ async function deploy() {
   
   // 0. Build do TypeScript
   console.log('🔨 [DEPLOY] Compilando TypeScript...');
-  const build = spawn('npm', ['run', 'build'], {
+  const build = spawn('npx', ['tsc', '-p', 'tsconfig.json'], {
     stdio: 'inherit',
     shell: true
   });
