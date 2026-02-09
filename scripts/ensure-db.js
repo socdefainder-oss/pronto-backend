@@ -60,7 +60,7 @@ try {
 try {
   // Tenta aplicar migracoes
   console.log("📦 Aplicando migracoes...");
-  execSync("npx prisma migrate deploy --skip-generate", {
+  execSync("npx prisma migrate deploy", {
     stdio: "inherit",
     cwd: projectRoot,
     env: { ...process.env },
@@ -72,7 +72,7 @@ try {
   try {
     // Fallback: usar db push que sincroniza o schema diretamente
     console.log("🔧 Sincronizando schema com o banco...");
-    execSync("npx prisma db push --skip-generate --accept-data-loss", {
+    execSync("npx prisma db push --accept-data-loss", {
       stdio: "inherit",
       cwd: projectRoot,
       env: { ...process.env },
