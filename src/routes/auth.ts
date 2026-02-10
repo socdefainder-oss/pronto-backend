@@ -42,7 +42,7 @@ authRoutes.post("/register-with-email", async (req, res) => {
           data: {
             name,
           },
-          emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/verify`,
+          emailRedirectTo: `${process.env.FRONTEND_URL || 'https://pronto-frontend-rust.vercel.app'}/auth/verify`,
         }
       });
 
