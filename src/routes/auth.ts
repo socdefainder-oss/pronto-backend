@@ -111,6 +111,10 @@ authRoutes.post("/verify-email", async (req, res) => {
   }
 
   try {
+    if (!supabase) {
+      return res.status(400).json({ error: 'Email verification não disponível' });
+    }
+
     // Verifica o token no Supabase
     const { data: { user }, error } = await supabase.auth.getUser(parsed.data.token);
 
