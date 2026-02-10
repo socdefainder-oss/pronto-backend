@@ -32,49 +32,64 @@ authRoutes.post("/register-with-email", async (req, res) => {
       return res.status(409).json({ error: "E-mail já cadastrado" });
     }
 
-    // Registra no Supabase Auth (envia email automaticamente)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
+    // Se Supabase Auth estiver configurado, usa email verification
+    if (supabase) {
+      // Registra no Supabase Auth (envia email automaticamente)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
+          emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/verify`,
+        }
+      });
+
+      if (authError) {
+        console.error('Supabase Auth error:', authError);
+        return res.status(400).json({ error: authError.message });
+      }
+
+      if (!authData.user) {
+        return res.status(500).json({ error: 'Falha ao criar usuário' });
+      }
+
+      // Hash da senha para o banco
+      const hash = await bcrypt.hash(password, 10);
+
+      // Cria no Prisma com isActive=false até confirmar email
+      const user = await prisma.user.create({
         data: {
           name,
-        },
-        emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/verify`,
-      }
-    });
+          email,
+          password: hash,
+          isActive: false, // Só ativa após confirmar email
+        }
+      });
 
-    if (authError) {
-      console.error('Supabase Auth error:', authError);
-      return res.status(400).json({ error: authError.message });
+      return res.json({
+        message: 'Cadastro realizado! Verifique seu email para confirmar.',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          needsEmailVerification: true
+        }
+      });
+    } else {
+      // Fallback: registro sem email verification (quando Supabase não está configurado)
+      const hash = await bcrypt.hash(password, 10);
+      const user = await prisma.user.create({
+        data: { name, email, password: hash }
+      });
+
+      const token = signToken({ userId: user.id });
+      return res.json({
+        token,
+        user: { id: user.id, name: user.name, email: user.email }
+      });
     }
-
-    if (!authData.user) {
-      return res.status(500).json({ error: 'Falha ao criar usuário' });
-    }
-
-    // Hash da senha para o banco
-    const hash = await bcrypt.hash(password, 10);
-
-    // Cria no Prisma com isActive=false até confirmar email
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hash,
-        isActive: false, // Só ativa após confirmar email
-      }
-    });
-
-    return res.json({
-      message: 'Cadastro realizado! Verifique seu email para confirmar.',
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        needsEmailVerification: true
-      }
-    });
   } catch (error) {
     console.error('Register error:', error);
     return res.status(500).json({ error: 'Erro ao registrar usuário' });
