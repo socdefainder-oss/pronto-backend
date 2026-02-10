@@ -148,6 +148,61 @@ authRoutes.post("/verify-email", async (req, res) => {
 });
 
 /**
+ * POST /api/auth/resend-verification
+ * Reenvia o email de verificação
+ */
+authRoutes.post("/resend-verification", async (req, res) => {
+  const schema = z.object({
+    email: z.string().email(),
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Email inválido' });
+  }
+
+  try {
+    if (!supabase) {
+      return res.status(400).json({ error: 'Email verification não disponível' });
+    }
+
+    const { email } = parsed.data;
+
+    // Verifica se o usuário existe
+    const user = await prisma.user.findUnique({ where: { email } });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    if (user.isActive) {
+      return res.status(400).json({ error: 'Email já verificado' });
+    }
+
+    // Reenvia o email de verificação via Supabase
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${process.env.FRONTEND_URL || 'https://pronto-frontend-rust.vercel.app'}/auth/verify`,
+      }
+    });
+
+    if (error) {
+      console.error('Supabase resend error:', error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    return res.json({
+      message: 'Email de verificação reenviado com sucesso!',
+    });
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    return res.status(500).json({ error: 'Erro ao reenviar email' });
+  }
+});
+
+/**
  * POST /api/auth/register (mantido para compatibilidade)
  * Registro sem confirmação de email
  */
