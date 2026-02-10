@@ -103,3 +103,61 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
 publicRoutes.get("/health", (_req, res) => {
   return res.json({ status: "ok", service: "pronto-public-api" });
 });
+
+/**
+ * GET /api/public/db-info
+ * Informações do banco de dados (debug)
+ */
+publicRoutes.get("/db-info", async (_req, res) => {
+  try {
+    const dbUrl = process.env.DATABASE_URL || 'NÃO DEFINIDA';
+    const sanitized = dbUrl.replace(/:[^:@]+@/, ':***@');
+    
+    // Informações do servidor
+    const serverInfo = await prisma.$queryRaw<Array<{
+      version: string;
+      database: string;
+      user: string;
+      server_ip: string;
+      server_port: number;
+    }>>`
+      SELECT 
+        version() as version,
+        current_database() as database,
+        current_user as user,
+        inet_server_addr() as server_ip,
+        inet_server_port() as server_port
+    `;
+    
+    // Conta registros
+    const [users, restaurants, products] = await Promise.all([
+      prisma.user.count(),
+      prisma.restaurant.count(),
+      prisma.product.count()
+    ]);
+    
+    // Verifica o host
+    const urlMatch = dbUrl.match(/@([^:\/]+)/);
+    const host = urlMatch ? urlMatch[1] : 'desconhecido';
+    
+    let provider = 'unknown';
+    if (host.includes('render')) provider = 'Render PostgreSQL';
+    else if (host.includes('neon')) provider = 'Neon';
+    else if (host.includes('railway')) provider = 'Railway';
+    
+    return res.json({
+      provider,
+      host,
+      connectionString: sanitized,
+      server: serverInfo[0],
+      data: {
+        users,
+        restaurants,
+        products
+      }
+    });
+  } catch (err) {
+    console.error("GET /api/public/db-info error", err);
+    return res.status(500).json({ error: String(err) });
+  }
+});
