@@ -94,6 +94,7 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
     acceptsCard: z.boolean().optional(),
     acceptsPix: z.boolean().optional(),
     acceptsCash: z.boolean().optional(),
+    schedules: z.any().optional().nullable(),
     
     // Novos campos
     brandName: z.string().optional().nullable(),
