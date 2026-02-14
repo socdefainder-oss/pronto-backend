@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import bcrypt from 'bcryptjs';
+import { auth, type AuthedRequest } from '../middlewares/auth.js';
 
 const router = Router();
 
@@ -23,12 +24,12 @@ const updateUserRoleSchema = z.object({
 
 // Middleware para verificar se usuário tem permissão no restaurante
 async function checkRestaurantAccess(
-  req: Request,
+  req: AuthedRequest,
   res: Response,
   requiredRoles: string[] = ['dono', 'gerente']
 ) {
   const { restaurantId } = req.params;
-  const userId = req.user?.id;
+  const userId = req.userId;
 
   if (!userId) {
     return res.status(401).json({ message: 'Não autenticado' });
@@ -64,7 +65,7 @@ async function checkRestaurantAccess(
 }
 
 // Listar todos os usuários do restaurante
-router.get('/:restaurantId/users', async (req: Request, res: Response) => {
+router.get('/:restaurantId/users', auth, async (req: AuthedRequest, res: Response) => {
   try {
     const { restaurantId } = req.params;
     
@@ -140,7 +141,7 @@ router.get('/:restaurantId/users', async (req: Request, res: Response) => {
 });
 
 // Criar novo usuário para o restaurante
-router.post('/:restaurantId/users', async (req: Request, res: Response) => {
+router.post('/:restaurantId/users', auth, async (req: AuthedRequest, res: Response) => {
   try {
     const { restaurantId } = req.params;
     
@@ -242,7 +243,7 @@ router.post('/:restaurantId/users', async (req: Request, res: Response) => {
 });
 
 // Atualizar role de um usuário
-router.patch('/:restaurantId/users/:userId', async (req: Request, res: Response) => {
+router.patch('/:restaurantId/users/:userId', auth, async (req: AuthedRequest, res: Response) => {
   try {
     const { restaurantId, userId } = req.params;
     
@@ -315,7 +316,7 @@ router.patch('/:restaurantId/users/:userId', async (req: Request, res: Response)
 });
 
 // Remover usuário do restaurante
-router.delete('/:restaurantId/users/:userId', async (req: Request, res: Response) => {
+router.delete('/:restaurantId/users/:userId', auth, async (req: AuthedRequest, res: Response) => {
   try {
     const { restaurantId, userId } = req.params;
     
