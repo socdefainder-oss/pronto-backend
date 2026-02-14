@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
+import { isRestaurantOpen } from "../lib/restaurantStatus.js";
 
 export const publicRoutes = Router();
 
@@ -43,6 +44,9 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
       return res.status(404).json({ error: "Restaurante não encontrado" });
     }
 
+    // Verifica se o restaurante está aberto
+    const status = isRestaurantOpen(restaurant.schedules);
+
     // Reorganiza os dados para facilitar no frontend
     const response = {
       id: restaurant.id,
@@ -62,6 +66,8 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
       acceptsCard: restaurant.acceptsCard,
       acceptsPix: restaurant.acceptsPix,
       acceptsCash: restaurant.acceptsCash,
+      isOpen: status.isOpen,
+      statusMessage: status.message,
       createdAt: restaurant.createdAt,
       updatedAt: restaurant.updatedAt,
       categories: restaurant.categories.map((cat: typeof restaurant.categories[number]) => ({

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { auth, type AuthedRequest } from "../middlewares/auth.js";
+import { isRestaurantOpen } from "../lib/restaurantStatus.js";
 
 export const restaurantRoutes = Router();
 
@@ -64,7 +65,14 @@ restaurantRoutes.get("/:id", auth, async (req: AuthedRequest, res) => {
     hasLogoUrl: !!restaurant.logoUrl
   });
 
-  return res.json(restaurant);
+  // Adiciona status de aberto/fechado
+  const status = isRestaurantOpen(restaurant.schedules);
+
+  return res.json({
+    ...restaurant,
+    isOpen: status.isOpen,
+    statusMessage: status.message
+  });
 });
 
 // ========== ATUALIZAR RESTAURANTE ==========
