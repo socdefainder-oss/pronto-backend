@@ -84,6 +84,7 @@ model Restaurant {
   isMEI               String? // MEI
   cnpjValid           Boolean @default(false) // CNPJ válido
   cnpjAnalyzedAt      String? // Data da análise do CNPJ
+  schedules           Json? // Horários de funcionamento por dia da semana
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
