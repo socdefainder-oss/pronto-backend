@@ -24,7 +24,7 @@ const app = express();
 app.use(express.json());
 
 /**
- * CORS - Middleware customizado para mÃ¡ximo controle
+ * CORS - Middleware customizado para máximo controle
  */
 const corsOrigin = process.env.CORS_ORIGIN || "https://pronto-frontend-rust.vercel.app";
 const allowedOrigins = corsOrigin.split(",").map(s => s.trim()).filter(Boolean);
@@ -32,9 +32,15 @@ const allowedOrigins = corsOrigin.split(",").map(s => s.trim()).filter(Boolean);
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   
-  // Permite se "*" ou se origin estÃ¡ na lista
-  if (corsOrigin === "*" || allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  // Permite se "*" ou se origin está na lista
+  if (corsOrigin === "*") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  } else if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  } else if (allowedOrigins.length > 0) {
+    // Se não tem origin ou não está na lista, usa o primeiro da lista como fallback
+    res.setHeader("Access-Control-Allow-Origin", allowedOrigins[0]);
     res.setHeader("Access-Control-Allow-Credentials", "true");
   }
   
