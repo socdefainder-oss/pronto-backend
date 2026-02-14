@@ -32,25 +32,24 @@ const allowedOrigins = corsOrigin.split(",").map(s => s.trim()).filter(Boolean);
 app.use((req, res, next) => {
   const origin = req.headers.origin || "";
   
-  // Permite se "*" ou se origin está na lista
+  // Define o Access-Control-Allow-Origin
   if (corsOrigin === "*") {
     res.setHeader("Access-Control-Allow-Origin", "*");
   } else if (origin && allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-  } else if (allowedOrigins.length > 0) {
-    // Se não tem origin ou não está na lista, usa o primeiro da lista como fallback
-    res.setHeader("Access-Control-Allow-Origin", allowedOrigins[0]);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
+  } else {
+    // Fallback para o primeiro domínio permitido
+    res.setHeader("Access-Control-Allow-Origin", allowedOrigins[0] || "https://pronto-frontend-rust.vercel.app");
   }
   
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
   res.setHeader("Access-Control-Max-Age", "86400");
   
   // Responde a OPTIONS (preflight)
   if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
+    return res.status(200).end();
   }
   
   next();
