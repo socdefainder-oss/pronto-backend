@@ -44,6 +44,25 @@ model RestaurantUser {
   @@map("restaurant_users")
 }
 
+model UserInvite {
+  id              String   @id @default(cuid())
+  email           String
+  role            String // "dono", "gerente", "operador"
+  restaurantIds   String[] // IDs dos restaurantes para dar acesso
+  invitedBy       String // ID do usuário que convidou
+  status          String   @default("pending") // "pending", "accepted", "expired"
+  token           String   @unique // Token único para aceitar o convite
+  expiresAt       DateTime // Data de expiração do convite
+  acceptedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([email])
+  @@index([token])
+  @@index([status])
+  @@map("user_invites")
+}
+
 model Restaurant {
   id          String   @id @default(cuid())
   ownerId     String

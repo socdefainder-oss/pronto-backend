@@ -388,4 +388,286 @@ function getDefaultPermissions(role: string): string[] {
   }
 }
 
+// ========== SISTEMA DE CONVITES ==========
+
+const inviteUserSchema = z.object({
+  email: z.string().email('Email inválido'),
+  role: z.enum(['operador', 'gerente', 'dono'], {
+    errorMap: () => ({ message: 'Role deve ser operador, gerente ou dono' }),
+  }),
+  restaurantIds: z.array(z.string()).min(1, 'Selecione pelo menos um restaurante'),
+});
+
+// Convida um usuário para múltiplos restaurantes
+router.post('/invite', auth, async (req: AuthedRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Não autenticado' });
+    }
+
+    const validatedData = inviteUserSchema.parse(req.body);
+    const { email, role, restaurantIds } = validatedData;
+
+    // Verifica se o usuário tem permissão em TODOS os restaurantes selecionados
+    for (const restaurantId of restaurantIds) {
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { ownerId: true },
+      });
+
+      // Verifica se é o dono
+      if (restaurant?.ownerId !== userId) {
+        // Se não é o dono, verifica se tem acesso como gerente
+        const access = await prisma.restaurantUser.findUnique({
+          where: {
+            restaurantId_userId: {
+              restaurantId,
+              userId,
+            },
+          },
+        });
+
+        if (!access || !['dono', 'gerente'].includes(access.role)) {
+          return res.status(403).json({ 
+            message: 'Você não tem permissão para convidar usuários para todos os restaurantes selecionados' 
+          });
+        }
+      }
+    }
+
+    // Verifica se o usuário já existe
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    if (existingUser) {
+      // Usuário já existe, adiciona acesso direto aos restaurantes
+      const results = [];
+      
+      for (const restaurantId of restaurantIds) {
+        // Verifica se já tem acesso
+        const existingAccess = await prisma.restaurantUser.findUnique({
+          where: {
+            restaurantId_userId: {
+              restaurantId,
+              userId: existingUser.id,
+            },
+          },
+        });
+
+        if (existingAccess) {
+          results.push({
+            restaurantId,
+            status: 'already_exists',
+            message: 'Usuário já tem acesso',
+          });
+          continue;
+        }
+
+        // Cria o acesso
+        await prisma.restaurantUser.create({
+          data: {
+            restaurantId,
+            userId: existingUser.id,
+            role,
+            permissions: getDefaultPermissions(role),
+          },
+        });
+
+        results.push({
+          restaurantId,
+          status: 'granted',
+          message: 'Acesso concedido',
+        });
+      }
+
+      return res.json({
+        message: 'Usuário já cadastrado. Acessos concedidos.',
+        existingUser: true,
+        results,
+      });
+    }
+
+    // Usuário não existe, cria um convite
+    const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // Expira em 7 dias
+
+    const invite = await prisma.userInvite.create({
+      data: {
+        email: email.toLowerCase(),
+        role,
+        restaurantIds,
+        invitedBy: userId,
+        token,
+        expiresAt,
+        status: 'pending',
+      },
+    });
+
+    // TODO: Enviar email com o link de convite
+    // const inviteLink = `${process.env.FRONTEND_URL}/auth/accept-invite/${token}`;
+    // await sendInviteEmail(email, inviteLink);
+
+    console.log(`Convite criado para ${email}. Token: ${token}`);
+    console.log(`Link de convite (implementar frontend): /auth/accept-invite/${token}`);
+
+    return res.json({
+      message: 'Convite enviado com sucesso',
+      existingUser: false,
+      invite: {
+        id: invite.id,
+        email: invite.email,
+        token: invite.token,
+        expiresAt: invite.expiresAt,
+      },
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: 'Dados inválidos', 
+        errors: error.errors 
+      });
+    }
+    console.error('Erro ao enviar convite:', error);
+    return res.status(500).json({ message: 'Erro ao enviar convite' });
+  }
+});
+
+// Lista todos os convites pendentes do usuário
+router.get('/invites', auth, async (req: AuthedRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Não autenticado' });
+    }
+
+    const invites = await prisma.userInvite.findMany({
+      where: { 
+        invitedBy: userId,
+        status: 'pending',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Busca os nomes dos restaurantes
+    const invitesWithDetails = await Promise.all(
+      invites.map(async (invite) => {
+        const restaurants = await prisma.restaurant.findMany({
+          where: { id: { in: invite.restaurantIds } },
+          select: { id: true, name: true, slug: true },
+        });
+
+        return {
+          ...invite,
+          restaurants,
+        };
+      })
+    );
+
+    return res.json(invitesWithDetails);
+  } catch (error) {
+    console.error('Erro ao listar convites:', error);
+    return res.status(500).json({ message: 'Erro ao listar convites' });
+  }
+});
+
+// Aceitar convite (usado na tela de cadastro)
+router.post('/invites/:token/accept', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    const { userId } = req.body; // ID do usuário que acabou de se cadastrar
+
+    if (!userId) {
+      return res.status(400).json({ message: 'ID do usuário é obrigatório' });
+    }
+
+    // Busca o convite
+    const invite = await prisma.userInvite.findUnique({
+      where: { token },
+    });
+
+    if (!invite) {
+      return res.status(404).json({ message: 'Convite não encontrado' });
+    }
+
+    if (invite.status !== 'pending') {
+      return res.status(400).json({ message: 'Convite já foi utilizado' });
+    }
+
+    if (new Date() > invite.expiresAt) {
+      await prisma.userInvite.update({
+        where: { id: invite.id },
+        data: { status: 'expired' },
+      });
+      return res.status(400).json({ message: 'Convite expirado' });
+    }
+
+    // Cria o acesso aos restaurantes
+    for (const restaurantId of invite.restaurantIds) {
+      await prisma.restaurantUser.create({
+        data: {
+          restaurantId,
+          userId,
+          role: invite.role,
+          permissions: getDefaultPermissions(invite.role),
+        },
+      });
+    }
+
+    // Marca convite como aceito
+    await prisma.userInvite.update({
+      where: { id: invite.id },
+      data: { 
+        status: 'accepted',
+        acceptedAt: new Date(),
+      },
+    });
+
+    return res.json({
+      message: 'Convite aceito com sucesso',
+      restaurantIds: invite.restaurantIds,
+    });
+
+  } catch (error) {
+    console.error('Erro ao aceitar convite:', error);
+    return res.status(500).json({ message: 'Erro ao aceitar convite' });
+  }
+});
+
+// Cancela um convite pendente
+router.delete('/invites/:inviteId', auth, async (req: AuthedRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Não autenticado' });
+    }
+
+    const { inviteId } = req.params;
+
+    const invite = await prisma.userInvite.findUnique({
+      where: { id: inviteId },
+    });
+
+    if (!invite) {
+      return res.status(404).json({ message: 'Convite não encontrado' });
+    }
+
+    if (invite.invitedBy !== userId) {
+      return res.status(403).json({ message: 'Você não tem permissão para cancelar este convite' });
+    }
+
+    await prisma.userInvite.delete({
+      where: { id: inviteId },
+    });
+
+    return res.json({ message: 'Convite cancelado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao cancelar convite:', error);
+    return res.status(500).json({ message: 'Erro ao cancelar convite' });
+  }
+});
+
 export default router;
