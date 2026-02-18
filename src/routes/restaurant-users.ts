@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import bcrypt from 'bcryptjs';
 import { auth, type AuthedRequest } from '../middlewares/auth.js';
+import { sendInviteEmail } from '../lib/email.js';
 
 const router = Router();
 
@@ -506,12 +507,23 @@ router.post('/invite', auth, async (req: AuthedRequest, res: Response) => {
       },
     });
 
-    // TODO: Enviar email com o link de convite
-    // const inviteLink = `${process.env.FRONTEND_URL}/auth/accept-invite/${token}`;
-    // await sendInviteEmail(email, inviteLink);
+    // Busca os nomes dos restaurantes para o email
+    const restaurants = await prisma.restaurant.findMany({
+      where: { id: { in: restaurantIds } },
+      select: { name: true },
+    });
+
+    const restaurantNames = restaurants.map(r => r.name);
+
+    // Envia email com o link de convite
+    const emailResult = await sendInviteEmail(email, restaurantNames, role, token);
+
+    if (!emailResult.success) {
+      console.error('Falha ao enviar email de convite:', emailResult.error);
+      // Não falha a operação, apenas loga o erro
+    }
 
     console.log(`Convite criado para ${email}. Token: ${token}`);
-    console.log(`Link de convite (implementar frontend): /auth/accept-invite/${token}`);
 
     return res.json({
       message: 'Convite enviado com sucesso',
@@ -571,6 +583,50 @@ router.get('/invites', auth, async (req: AuthedRequest, res: Response) => {
   } catch (error) {
     console.error('Erro ao listar convites:', error);
     return res.status(500).json({ message: 'Erro ao listar convites' });
+  }
+});
+
+// Buscar informações de um convite específico (público - sem auth)
+router.get('/invites/:token/info', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+
+    const invite = await prisma.userInvite.findUnique({
+      where: { token },
+    });
+
+    if (!invite) {
+      return res.status(404).json({ message: 'Convite não encontrado' });
+    }
+
+    if (invite.status !== 'pending') {
+      return res.status(400).json({ message: 'Convite já foi utilizado ou expirado' });
+    }
+
+    if (new Date() > invite.expiresAt) {
+      await prisma.userInvite.update({
+        where: { id: invite.id },
+        data: { status: 'expired' },
+      });
+      return res.status(400).json({ message: 'Convite expirado' });
+    }
+
+    // Busca os restaurantes
+    const restaurants = await prisma.restaurant.findMany({
+      where: { id: { in: invite.restaurantIds } },
+      select: { id: true, name: true, slug: true },
+    });
+
+    return res.json({
+      email: invite.email,
+      role: invite.role,
+      restaurants,
+      expiresAt: invite.expiresAt,
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar convite:', error);
+    return res.status(500).json({ message: 'Erro ao buscar convite' });
   }
 });
 
