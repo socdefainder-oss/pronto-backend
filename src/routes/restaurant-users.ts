@@ -662,8 +662,25 @@ router.post('/invites/:token/accept', async (req: Request, res: Response) => {
     }
 
     // Cria o acesso aos restaurantes
+    console.log(`[ACCEPT INVITE] Criando acessos para userId: ${userId}, restaurantIds: ${invite.restaurantIds.join(', ')}`);
+    
     for (const restaurantId of invite.restaurantIds) {
-      await prisma.restaurantUser.create({
+      // Verifica se já existe acesso (evita duplicatas)
+      const existingAccess = await prisma.restaurantUser.findUnique({
+        where: {
+          restaurantId_userId: {
+            restaurantId,
+            userId,
+          },
+        },
+      });
+
+      if (existingAccess) {
+        console.log(`[ACCEPT INVITE] Usuário ${userId} já tem acesso ao restaurante ${restaurantId}`);
+        continue;
+      }
+
+      const created = await prisma.restaurantUser.create({
         data: {
           restaurantId,
           userId,
@@ -671,6 +688,7 @@ router.post('/invites/:token/accept', async (req: Request, res: Response) => {
           permissions: getDefaultPermissions(invite.role),
         },
       });
+      console.log(`[ACCEPT INVITE] Acesso criado: ${created.id} - restaurante: ${restaurantId}, role: ${invite.role}`);
     }
 
     // Marca convite como aceito

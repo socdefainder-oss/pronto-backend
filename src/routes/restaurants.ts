@@ -34,35 +34,86 @@ restaurantRoutes.post("/", auth, async (req: AuthedRequest, res) => {
 
 // ========== LISTAR MEUS RESTAURANTES ==========
 restaurantRoutes.get("/mine", auth, async (req: AuthedRequest, res) => {
-  const ownerId = req.userId!;
-  const restaurants = await prisma.restaurant.findMany({
-    where: { ownerId },
+  const userId = req.userId!;
+  
+  // Busca restaurantes onde o usuário é dono
+  const ownedRestaurants = await prisma.restaurant.findMany({
+    where: { ownerId: userId },
     orderBy: { createdAt: "desc" }
   });
+
+  // Busca restaurantes onde o usuário tem acesso como membro
+  const memberAccess = await prisma.restaurantUser.findMany({
+    where: { userId },
+    include: {
+      restaurant: true
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  // Combina os dois arrays e remove duplicatas
+  const memberRestaurants = memberAccess.map(access => access.restaurant);
+  
+  // Usa um Map para evitar duplicatas por ID
+  const restaurantMap = new Map();
+  
+  // Adiciona restaurantes owned primeiro (prioridade)
+  ownedRestaurants.forEach(r => restaurantMap.set(r.id, r));
+  
+  // Adiciona restaurantes como membro (se ainda não existir)
+  memberRestaurants.forEach(r => {
+    if (!restaurantMap.has(r.id)) {
+      restaurantMap.set(r.id, r);
+    }
+  });
+
+  const restaurants = Array.from(restaurantMap.values())
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  console.log(`[GET /mine] User ${userId} has access to ${restaurants.length} restaurants (${ownedRestaurants.length} owned, ${memberRestaurants.length} as member)`);
+
   return res.json({ restaurants });
 });
 
 // ========== PEGAR RESTAURANTE POR ID (PRIVADO) ==========
 restaurantRoutes.get("/:id", auth, async (req: AuthedRequest, res) => {
-  const ownerId = req.userId!;
+  const userId = req.userId!;
   const { id } = req.params;
 
-  const restaurant = await prisma.restaurant.findFirst({
-    where: {
-      id: id,
-      ownerId: ownerId,
-    },
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id },
   });
 
   if (!restaurant) {
-    return res.status(404).json({ error: "Restaurante não encontrado ou não pertence a você" });
+    return res.status(404).json({ error: "Restaurante não encontrado" });
+  }
+
+  // Verifica se o usuário é o dono
+  const isOwner = restaurant.ownerId === userId;
+  
+  // Verifica se o usuário tem acesso como membro
+  const memberAccess = await prisma.restaurantUser.findUnique({
+    where: {
+      restaurantId_userId: {
+        restaurantId: id,
+        userId: userId,
+      },
+    },
+  });
+
+  // Se não é dono nem membro, não tem acesso
+  if (!isOwner && !memberAccess) {
+    return res.status(403).json({ error: "Você não tem acesso a este restaurante" });
   }
   
   console.log("[GET /restaurants/:id] Restaurant fetched:", {
     id: restaurant.id,
     name: restaurant.name,
     logoUrl: restaurant.logoUrl,
-    hasLogoUrl: !!restaurant.logoUrl
+    hasLogoUrl: !!restaurant.logoUrl,
+    isOwner,
+    isMember: !!memberAccess,
+    memberRole: memberAccess?.role
   });
 
   // Adiciona status de aberto/fechado
@@ -131,24 +182,42 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
     return res.status(400).json({ error: errorMessage, details: errors });
   }
 
-  const ownerId = req.userId!;
+  const userId = req.userId!;
   const { id } = req.params;
   const data = parsed.data;
   
   console.log("[PATCH /restaurants/:id] Updating restaurant:", {
     id,
-    ownerId,
+    userId,
     logoUrl: data.logoUrl,
     hasLogoUrl: !!data.logoUrl
   });
 
-  // Verifica se restaurante existe e pertence ao usuário
-  const restaurant = await prisma.restaurant.findFirst({
-    where: { id, ownerId },
+  // Verifica se restaurante existe
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id },
   });
 
   if (!restaurant) {
     return res.status(404).json({ error: "Restaurante não encontrado" });
+  }
+
+  // Verifica se o usuário é o dono
+  const isOwner = restaurant.ownerId === userId;
+  
+  // Verifica se o usuário tem acesso como membro (gerente ou dono)
+  const memberAccess = await prisma.restaurantUser.findUnique({
+    where: {
+      restaurantId_userId: {
+        restaurantId: id,
+        userId: userId,
+      },
+    },
+  });
+
+  // Se não é dono nem membro com permissões, não pode editar
+  if (!isOwner && (!memberAccess || !['dono', 'gerente'].includes(memberAccess.role))) {
+    return res.status(403).json({ error: "Você não tem permissão para editar este restaurante" });
   }
 
   // Se slug foi alterado, verifica se já existe
