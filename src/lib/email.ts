@@ -1,6 +1,10 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Inicializa Resend apenas se a API key estiver configurada
+let resend: Resend | null = null;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+}
 
 export async function sendInviteEmail(
   email: string,
@@ -18,6 +22,20 @@ export async function sendInviteEmail(
   
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   const inviteUrl = `${frontendUrl}/auth/accept-invite/${token}`;
+
+  // Se não houver API key, apenas loga o link
+  if (!resend) {
+    console.log('⚠️  RESEND_API_KEY não configurada. Email não enviado.');
+    console.log(`📧 Link de convite para ${email}:`);
+    console.log(`🔗 ${inviteUrl}`);
+    console.log(`👤 Role: ${roleTranslation}`);
+    console.log(`🏪 Restaurantes: ${restaurantNames.join(', ')}`);
+    return { 
+      success: false, 
+      error: 'RESEND_API_KEY não configurada',
+      inviteUrl 
+    };
+  }
 
   try {
     const data = await resend.emails.send({

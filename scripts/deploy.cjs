@@ -33,15 +33,10 @@ async function deploy() {
       DELETE FROM "_prisma_migrations"
       WHERE finished_at IS NULL 
          OR migration_name = '20260202175015_add_restaurant_settings_fields'
-         OR migration_name = '20260202193430_add_settings_fields_v2'
-      RETURNING migration_name;
+         OR migration_name = '20260202193430_add_settings_fields_v2';
     `);
     
-    if (result && result.length > 0) {
-      console.log('✅ [DEPLOY] Migrations deletadas:', result.map(r => r.migration_name).join(', '));
-    } else {
-      console.log('✅ [DEPLOY] Nenhuma migration problemática encontrada.');
-    }
+    console.log('✅ [DEPLOY] Migrations limpas.');
     
     await prisma.$disconnect();
     
