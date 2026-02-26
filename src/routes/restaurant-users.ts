@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import bcrypt from 'bcryptjs';
 import { auth, type AuthedRequest } from '../middlewares/auth.js';
-import { sendInviteEmail } from '../lib/email.js';
+import { sendInviteEmail, generateRandomPassword, sendWelcomeEmail } from '../lib/email.js';
 
 const router = Router();
 
@@ -22,6 +22,20 @@ const createUserSchema = z.object({
 const updateUserRoleSchema = z.object({
   role: z.enum(['operador', 'gerente', 'dono']),
 });
+
+// Retorna permissões padrão baseadas no role
+function getDefaultPermissions(role: string): string[] {
+  switch (role) {
+    case 'dono':
+      return ['all']; // Acesso total
+    case 'gerente':
+      return ['products', 'categories', 'orders', 'kitchen', 'coupons', 'banners', 'reports'];
+    case 'operador':
+      return ['orders', 'kitchen']; // Apenas pedidos e cozinha
+    default:
+      return ['orders'];
+  }
+}
 
 // Middleware para verificar se usuário tem permissão no restaurante
 async function checkRestaurantAccess(
@@ -165,11 +179,13 @@ router.post('/:restaurantId/users', auth, async (req: AuthedRequest, res: Respon
       where: { email: validatedData.email },
     });
 
+    let generatedPassword: string | null = null;
+
     // Se o usuário não existe, cria um novo
     if (!user) {
-      const senhaHash = validatedData.senha 
-        ? await bcrypt.hash(validatedData.senha, 10)
-        : await bcrypt.hash(Math.random().toString(36).slice(-8), 10); // Senha temporária
+      // Gera senha aleatória de 8 caracteres
+      generatedPassword = generateRandomPassword();
+      const senhaHash = await bcrypt.hash(generatedPassword, 10);
 
       user = await prisma.user.create({
         data: {
@@ -182,6 +198,8 @@ router.post('/:restaurantId/users', auth, async (req: AuthedRequest, res: Respon
           isActive: true,
         },
       });
+
+      console.log(`✅ Novo usuário criado: ${user.email} com senha temporária`);
     }
 
     // Verifica se o usuário já tem acesso ao restaurante
@@ -221,6 +239,25 @@ router.post('/:restaurantId/users', auth, async (req: AuthedRequest, res: Respon
       },
     });
 
+    // Envia email com credenciais se foi criado novo usuário
+    if (generatedPassword) {
+      console.log(`📧 Enviando email de boas-vindas para ${user.email}...`);
+      
+      const emailResult = await sendWelcomeEmail(
+        user.email,
+        user.name,
+        restaurant.name,
+        validatedData.role,
+        generatedPassword
+      );
+
+      if (emailResult.success) {
+        console.log(`✅ Email enviado com sucesso para ${user.email}`);
+      } else {
+        console.log(`⚠️ Email não enviado: ${emailResult.error}. Senha: ${generatedPassword}`);
+      }
+    }
+
     return res.status(201).json({
       id: restaurantUser.user.id,
       name: restaurantUser.user.name,
@@ -230,6 +267,7 @@ router.post('/:restaurantId/users', auth, async (req: AuthedRequest, res: Respon
       role: restaurantUser.role,
       isOwner: false,
       createdAt: restaurantUser.createdAt,
+      emailSent: generatedPassword ? true : false,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

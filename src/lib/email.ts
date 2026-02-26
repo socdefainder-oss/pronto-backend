@@ -150,3 +150,191 @@ ${restaurantList}
     return { success: false, error };
   }
 }
+
+// Gera senha aleatória legível (8 caracteres)
+export function generateRandomPassword(): string {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // Sem confusão (sem i, l, o, 0, 1)
+  const upperChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const numbers = '23456789';
+  
+  let password = '';
+  
+  // 1 maiúscula
+  password += upperChars[Math.floor(Math.random() * upperChars.length)];
+  
+  // 5 minúsculas
+  for (let i = 0; i < 5; i++) {
+    password += chars[Math.floor(Math.random() * chars.length)];
+  }
+  
+  // 2 números
+  for (let i = 0; i < 2; i++) {
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+  }
+  
+  // Embaralha os caracteres
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+// Envia email de boas-vindas com senha temporária
+export async function sendWelcomeEmail(
+  email: string,
+  name: string,
+  restaurantName: string,
+  role: string,
+  temporaryPassword: string
+) {
+  const roleTranslation = {
+    dono: 'Dono',
+    gerente: 'Gerente',
+    operador: 'Operador',
+  }[role] || role;
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const loginUrl = `${frontendUrl}/login`;
+
+  // Se não houver API key, apenas loga as credenciais
+  if (!resend) {
+    console.log('⚠️  RESEND_API_KEY não configurada. Email não enviado.');
+    console.log(`📧 Credenciais para ${email}:`);
+    console.log(`👤 Nome: ${name}`);
+    console.log(`🔑 Senha temporária: ${temporaryPassword}`);
+    console.log(`🏪 Restaurante: ${restaurantName}`);
+    console.log(`👔 Role: ${roleTranslation}`);
+    console.log(`🔗 Login: ${loginUrl}`);
+    return { 
+      success: false, 
+      error: 'RESEND_API_KEY não configurada',
+      loginUrl,
+      password: temporaryPassword
+    };
+  }
+
+  try {
+    const data = await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'Pronto <onboarding@resend.dev>',
+      to: [email],
+      subject: `🎉 Bem-vindo ao ${restaurantName} - Suas credenciais de acesso`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Bem-vindo - Pronto</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f7fafc;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f7fafc; padding: 40px 20px;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  
+                  <!-- Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center;">
+                      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
+                        🎉 Bem-vindo ao Pronto!
+                      </h1>
+                    </td>
+                  </tr>
+
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 40px;">
+                      <p style="color: #2d3748; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+                        Olá <strong>${name}</strong>! 👋
+                      </p>
+                      
+                      <p style="color: #2d3748; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0;">
+                        Uma conta foi criada para você no <strong>Pronto</strong> para gerenciar o restaurante <strong>${restaurantName}</strong>.
+                      </p>
+
+                      <!-- Credentials Box -->
+                      <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #10b981; border-radius: 12px; padding: 24px; margin-bottom: 32px;">
+                        <h2 style="color: #065f46; font-size: 18px; margin: 0 0 20px 0;">
+                          🔐 Suas Credenciais de Acesso
+                        </h2>
+                        
+                        <div style="margin-bottom: 16px;">
+                          <p style="color: #047857; font-size: 13px; margin: 0 0 6px 0; font-weight: 600;">
+                            📧 EMAIL
+                          </p>
+                          <p style="color: #1f2937; font-size: 16px; margin: 0; font-family: 'Courier New', monospace; background-color: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #d1fae5;">
+                            ${email}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p style="color: #047857; font-size: 13px; margin: 0 0 6px 0; font-weight: 600;">
+                            🔑 SENHA TEMPORÁRIA
+                          </p>
+                          <p style="color: #1f2937; font-size: 18px; margin: 0; font-family: 'Courier New', monospace; background-color: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #d1fae5; font-weight: bold; letter-spacing: 2px; text-align: center;">
+                            ${temporaryPassword}
+                          </p>
+                        </div>
+                      </div>
+
+                      <!-- Role Badge -->
+                      <div style="background-color: #edf2f7; border-radius: 12px; padding: 20px; margin-bottom: 32px;">
+                        <p style="color: #4a5568; font-size: 14px; margin: 0 0 8px 0;">
+                          <strong>Seu nível de acesso:</strong>
+                        </p>
+                        <span style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 14px;">
+                          ${roleTranslation}
+                        </span>
+                      </div>
+
+                      <!-- CTA Button -->
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" style="padding: 20px 0;">
+                            <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.4);">
+                              🚀 Fazer Login Agora
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!-- Alternative Link -->
+                      <p style="color: #718096; font-size: 14px; line-height: 1.6; margin: 24px 0 0 0; text-align: center;">
+                        Ou acesse diretamente:<br>
+                        <a href="${loginUrl}" style="color: #10b981; word-break: break-all;">${loginUrl}</a>
+                      </p>
+
+                      <!-- Security Warning -->
+                      <div style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin-top: 32px;">
+                        <p style="color: #92400e; font-size: 13px; margin: 0; text-align: center;">
+                          ⚠️ <strong>Importante:</strong> Altere sua senha após o primeiro login em <strong>Configurações</strong>
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #f7fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+                      <p style="color: #718096; font-size: 13px; margin: 0;">
+                        © ${new Date().getFullYear()} Pronto. Todos os direitos reservados.
+                      </p>
+                      <p style="color: #a0aec0; font-size: 12px; margin: 8px 0 0 0;">
+                        Se você não solicitou esta conta, entre em contato conosco.
+                      </p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+
+    console.log('✅ Email de boas-vindas enviado:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ Erro ao enviar email de boas-vindas:', error);
+    return { success: false, error };
+  }
+}
