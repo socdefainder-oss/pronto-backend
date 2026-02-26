@@ -23,20 +23,6 @@ const updateUserRoleSchema = z.object({
   role: z.enum(['operador', 'gerente', 'dono']),
 });
 
-// Retorna permissões padrão baseadas no role
-function getDefaultPermissions(role: string): string[] {
-  switch (role) {
-    case 'dono':
-      return ['all']; // Acesso total
-    case 'gerente':
-      return ['products', 'categories', 'orders', 'kitchen', 'coupons', 'banners', 'reports'];
-    case 'operador':
-      return ['orders', 'kitchen']; // Apenas pedidos e cozinha
-    default:
-      return ['orders'];
-  }
-}
-
 // Middleware para verificar se usuário tem permissão no restaurante
 async function checkRestaurantAccess(
   req: AuthedRequest,
