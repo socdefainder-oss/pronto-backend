@@ -71,6 +71,18 @@ ordersRoutes.post("/", async (req: AuthedRequest, res: Response) => {
         restaurantId,
         isActive: true,
       },
+      include: {
+        complementGroups: {
+          where: { status: "active" },
+          include: {
+            options: {
+              where: { status: "active" },
+              orderBy: { sortOrder: "asc" }
+            }
+          },
+          orderBy: { sortOrder: "asc" }
+        }
+      }
     });
 
     if (products.length !== productIds.length) {
@@ -79,21 +91,77 @@ ordersRoutes.post("/", async (req: AuthedRequest, res: Response) => {
 
     // Calcular total e preparar itens
     let subtotalCents = 0;
-    const orderItems = items.map((item: any) => {
-      const product = products.find((p) => p.id === item.productId);
-      if (!product) throw new Error("Produto não encontrado");
+    const orderItems: Array<{
+      productId: string;
+      productName: string;
+      priceCents: number;
+      quantity: number;
+      notes: string | null;
+    }> = [];
 
-      const itemTotal = product.priceCents * item.quantity;
+    for (const item of items) {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) {
+        return res.status(400).json({ error: "Produto não encontrado" });
+      }
+
+      const quantity = Number(item.quantity || 0);
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: `Quantidade inválida para o produto ${product.name}` });
+      }
+
+      const selectedOptionIds = Array.from(new Set(Array.isArray(item.selectedOptionIds)
+        ? item.selectedOptionIds.map((id: unknown) => String(id))
+        : []));
+
+      const selectedOptions = product.complementGroups
+        .flatMap((group) => group.options.map((option) => ({
+          id: option.id,
+          name: option.name,
+          priceCents: option.priceCents,
+          groupId: group.id,
+          groupTitle: group.title,
+        })))
+        .filter((option) => selectedOptionIds.includes(option.id));
+
+      if (selectedOptions.length !== selectedOptionIds.length) {
+        return res.status(400).json({ error: `Adicionais inválidos para o produto ${product.name}` });
+      }
+
+      for (const group of product.complementGroups) {
+        const selectedInGroup = selectedOptions.filter((option) => option.groupId === group.id).length;
+
+        if (selectedInGroup < group.minSelect || selectedInGroup > group.maxSelect) {
+          return res.status(400).json({
+            error: `Seleção inválida no grupo ${group.title} para o produto ${product.name}`
+          });
+        }
+      }
+
+      const complementsCents = selectedOptions.reduce((sum, option) => sum + option.priceCents, 0);
+      const unitPriceCents = product.priceCents + complementsCents;
+      const itemTotal = unitPriceCents * quantity;
       subtotalCents += itemTotal;
 
-      return {
+      const notesParts: string[] = [];
+      if (item.notes) {
+        notesParts.push(String(item.notes));
+      }
+      if (selectedOptions.length > 0) {
+        const complementsText = selectedOptions
+          .map((option) => `${option.name} (R$ ${(option.priceCents / 100).toFixed(2).replace('.', ',')})`)
+          .join(", ");
+        notesParts.push(`Adicionais: ${complementsText}`);
+      }
+
+      orderItems.push({
         productId: product.id,
         productName: product.name,
-        priceCents: product.priceCents,
-        quantity: item.quantity,
-        notes: item.notes,
-      };
-    });
+        priceCents: unitPriceCents,
+        quantity,
+        notes: notesParts.length > 0 ? notesParts.join(" | ") : null,
+      });
+    }
 
     // Validar e aplicar cupom se fornecido
     let couponId = null;

@@ -5,6 +5,22 @@ import { auth, type AuthedRequest } from "../middlewares/auth.js";
 
 export const catalogRoutes = Router();
 
+const complementOptionSchema = z.object({
+  name: z.string().min(1),
+  priceCents: z.number().int().min(0),
+  status: z.enum(["active", "inactive", "out_of_stock"]).optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+const complementGroupSchema = z.object({
+  title: z.string().min(1),
+  minSelect: z.number().int().min(0).optional(),
+  maxSelect: z.number().int().min(1).optional(),
+  status: z.enum(["active", "inactive", "out_of_stock"]).optional(),
+  sortOrder: z.number().int().optional(),
+  options: z.array(complementOptionSchema).default([]),
+});
+
 // ========== CATEGORIAS ==========
 
 // Criar categoria
@@ -137,9 +153,14 @@ catalogRoutes.post("/products", auth, async (req: AuthedRequest, res) => {
     restaurantId: z.string().min(1),
     categoryId: z.string().optional().nullable(),
     name: z.string().min(1),
+    pdvCode: z.string().optional().nullable(),
+    portionSize: z.string().optional().nullable(),
+    servesUpTo: z.number().int().min(1).optional().nullable(),
     description: z.string().optional().nullable(),
     priceCents: z.number().int().min(0),
     imageUrl: z.string().optional().nullable(), // REMOVIDO: .url()
+    hasComplements: z.boolean().optional(),
+    complementGroups: z.array(complementGroupSchema).optional(),
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().optional()
   });
@@ -165,15 +186,51 @@ catalogRoutes.post("/products", auth, async (req: AuthedRequest, res) => {
     }
   }
 
-  const product = await prisma.product.create({
-    data: {
-      ...parsed.data,
-      isActive: parsed.data.isActive ?? true,
-      sortOrder: parsed.data.sortOrder ?? 0
-    },
-    include: {
-      category: true
+  const { complementGroups, ...baseData } = parsed.data;
+
+  const product = await prisma.$transaction(async (tx) => {
+    const created = await tx.product.create({
+      data: {
+        ...baseData,
+        hasComplements: parsed.data.hasComplements ?? ((complementGroups?.length || 0) > 0),
+        isActive: parsed.data.isActive ?? true,
+        sortOrder: parsed.data.sortOrder ?? 0
+      }
+    });
+
+    if ((parsed.data.hasComplements ?? false) && complementGroups && complementGroups.length > 0) {
+      for (const [groupIndex, group] of complementGroups.entries()) {
+        await tx.productComplementGroup.create({
+          data: {
+            productId: created.id,
+            title: group.title,
+            minSelect: group.minSelect ?? 0,
+            maxSelect: group.maxSelect ?? 1,
+            status: group.status ?? "active",
+            sortOrder: group.sortOrder ?? groupIndex,
+            options: {
+              create: group.options.map((option, optionIndex) => ({
+                name: option.name,
+                priceCents: option.priceCents,
+                status: option.status ?? "active",
+                sortOrder: option.sortOrder ?? optionIndex,
+              }))
+            }
+          }
+        });
+      }
     }
+
+    return tx.product.findUnique({
+      where: { id: created.id },
+      include: {
+        category: true,
+        complementGroups: {
+          include: { options: { orderBy: { sortOrder: "asc" } } },
+          orderBy: { sortOrder: "asc" }
+        }
+      }
+    });
   });
 
   return res.json({ product });
@@ -191,7 +248,11 @@ catalogRoutes.get("/products/:restaurantId", auth, async (req: AuthedRequest, re
   const products = await prisma.product.findMany({
     where: { restaurantId },
     include: {
-      category: true
+      category: true,
+      complementGroups: {
+        include: { options: { orderBy: { sortOrder: "asc" } } },
+        orderBy: { sortOrder: "asc" }
+      }
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }]
   });
@@ -205,9 +266,14 @@ catalogRoutes.patch("/products/:id", auth, async (req: AuthedRequest, res) => {
 
   const schema = z.object({
     name: z.string().min(1).optional(),
+    pdvCode: z.string().optional().nullable(),
+    portionSize: z.string().optional().nullable(),
+    servesUpTo: z.number().int().min(1).optional().nullable(),
     description: z.string().optional().nullable(),
     priceCents: z.number().int().min(0).optional(),
     imageUrl: z.string().optional().nullable(), // REMOVIDO: .url()
+    hasComplements: z.boolean().optional(),
+    complementGroups: z.array(complementGroupSchema).optional(),
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().optional(),
     categoryId: z.string().optional().nullable()
@@ -243,12 +309,57 @@ catalogRoutes.patch("/products/:id", auth, async (req: AuthedRequest, res) => {
     }
   }
 
-  const updated = await prisma.product.update({ 
-    where: { id }, 
-    data: parsed.data,
-    include: {
-      category: true
+  const { complementGroups, ...productPatch } = parsed.data;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    await tx.product.update({ where: { id }, data: productPatch });
+
+    const shouldReplaceComplements = complementGroups !== undefined || productPatch.hasComplements === false;
+
+    if (shouldReplaceComplements) {
+      await tx.productComplementGroup.deleteMany({ where: { productId: id } });
+
+      if ((productPatch.hasComplements ?? true) && complementGroups && complementGroups.length > 0) {
+        for (const [groupIndex, group] of complementGroups.entries()) {
+          await tx.productComplementGroup.create({
+            data: {
+              productId: id,
+              title: group.title,
+              minSelect: group.minSelect ?? 0,
+              maxSelect: group.maxSelect ?? 1,
+              status: group.status ?? "active",
+              sortOrder: group.sortOrder ?? groupIndex,
+              options: {
+                create: group.options.map((option, optionIndex) => ({
+                  name: option.name,
+                  priceCents: option.priceCents,
+                  status: option.status ?? "active",
+                  sortOrder: option.sortOrder ?? optionIndex,
+                }))
+              }
+            }
+          });
+        }
+      }
+
+      await tx.product.update({
+        where: { id },
+        data: {
+          hasComplements: (productPatch.hasComplements ?? false) && !!(complementGroups && complementGroups.length)
+        }
+      });
     }
+
+    return tx.product.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        complementGroups: {
+          include: { options: { orderBy: { sortOrder: "asc" } } },
+          orderBy: { sortOrder: "asc" }
+        }
+      }
+    });
   });
   
   return res.json({ product: updated });

@@ -144,17 +144,22 @@ model Product {
   restaurantId String
   categoryId   String?
   name         String
+  pdvCode      String?
+  portionSize  String?
+  servesUpTo   Int?
   description  String?
   priceCents   Int
   imageUrl     String?
+  hasComplements Boolean @default(false)
   isActive     Boolean  @default(true)
   sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  restaurant Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  category   Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  orderItems OrderItem[]
+  restaurant       Restaurant              @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category         Category?               @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems       OrderItem[]
+  complementGroups ProductComplementGroup[]
 
   @@index([restaurantId])
   @@index([categoryId])
@@ -162,6 +167,44 @@ model Product {
   @@index([sortOrder])
   @@index([createdAt])
   @@map("products")
+}
+
+model ProductComplementGroup {
+  id          String   @id @default(cuid())
+  productId   String
+  title       String
+  minSelect   Int      @default(0)
+  maxSelect   Int      @default(1)
+  status      String   @default("active")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options ProductComplementOption[]
+
+  @@index([productId])
+  @@index([sortOrder])
+  @@index([status])
+  @@map("product_complement_groups")
+}
+
+model ProductComplementOption {
+  id          String   @id @default(cuid())
+  groupId     String
+  name        String
+  priceCents  Int      @default(0)
+  status      String   @default("active")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  group ProductComplementGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([sortOrder])
+  @@index([status])
+  @@map("product_complement_options")
 }
 
 model Customer {

@@ -26,7 +26,17 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
           include: {
             products: {
               where: { isActive: true },
-              orderBy: { sortOrder: "asc" }
+              orderBy: { sortOrder: "asc" },
+              include: {
+                complementGroups: {
+                  include: {
+                    options: {
+                      orderBy: { sortOrder: "asc" }
+                    }
+                  },
+                  orderBy: { sortOrder: "asc" }
+                }
+              }
             }
           }
         },
@@ -35,7 +45,17 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
             isActive: true,
             categoryId: null 
           },
-          orderBy: { sortOrder: "asc" }
+          orderBy: { sortOrder: "asc" },
+          include: {
+            complementGroups: {
+              include: {
+                options: {
+                  orderBy: { sortOrder: "asc" }
+                }
+              },
+              orderBy: { sortOrder: "asc" }
+            }
+          }
         }
       },
     });
@@ -77,21 +97,59 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
         products: cat.products.map((p: typeof cat.products[number]) => ({
           id: p.id,
           name: p.name,
+          pdvCode: p.pdvCode,
+          portionSize: p.portionSize,
+          servesUpTo: p.servesUpTo,
           description: p.description,
           price: p.priceCents / 100, // Converte centavos para reais
           priceCents: p.priceCents,
           imageUrl: p.imageUrl,
-          isActive: p.isActive
+          isActive: p.isActive,
+          hasComplements: p.hasComplements,
+          complementGroups: p.complementGroups.map((group: typeof p.complementGroups[number]) => ({
+            id: group.id,
+            title: group.title,
+            minSelect: group.minSelect,
+            maxSelect: group.maxSelect,
+            status: group.status,
+            sortOrder: group.sortOrder,
+            options: group.options.map((option: typeof group.options[number]) => ({
+              id: option.id,
+              name: option.name,
+              priceCents: option.priceCents,
+              status: option.status,
+              sortOrder: option.sortOrder,
+            })),
+          }))
         }))
       })),
       productsWithoutCategory: restaurant.products.map((p: typeof restaurant.products[number]) => ({
         id: p.id,
         name: p.name,
+        pdvCode: p.pdvCode,
+        portionSize: p.portionSize,
+        servesUpTo: p.servesUpTo,
         description: p.description,
         price: p.priceCents / 100,
         priceCents: p.priceCents,
         imageUrl: p.imageUrl,
-        isActive: p.isActive
+        isActive: p.isActive,
+        hasComplements: p.hasComplements,
+        complementGroups: p.complementGroups.map((group: typeof p.complementGroups[number]) => ({
+          id: group.id,
+          title: group.title,
+          minSelect: group.minSelect,
+          maxSelect: group.maxSelect,
+          status: group.status,
+          sortOrder: group.sortOrder,
+          options: group.options.map((option: typeof group.options[number]) => ({
+            id: option.id,
+            name: option.name,
+            priceCents: option.priceCents,
+            status: option.status,
+            sortOrder: option.sortOrder,
+          })),
+        }))
       }))
     };
 
