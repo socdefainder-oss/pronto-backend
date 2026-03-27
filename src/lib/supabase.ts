@@ -2,14 +2,26 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('⚠️  Supabase Auth não configurado. Defina SUPABASE_URL e SUPABASE_ANON_KEY');
 }
 
-// Só cria o cliente se as variáveis estiverem configuradas
+if (!supabaseServiceKey) {
+  console.warn('⚠️  SUPABASE_SERVICE_ROLE_KEY não configurada. Uploads de imagens não funcionarão.');
+}
+
+// Cliente público (autenticação)
 export const supabase = supabaseUrl && supabaseAnonKey 
   ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
+
+// Cliente admin com service role (para Storage — bypassa RLS)
+export const supabaseAdmin = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+    })
   : null;
 
 // Função para fazer upload de imagem
@@ -18,7 +30,8 @@ export async function uploadImage(
   fileName: string,
   bucket: string = 'products'
 ): Promise<{ url: string; path: string }> {
-  if (!supabase) {
+  const client = supabaseAdmin || supabase;
+  if (!client) {
     throw new Error('Supabase não configurado');
   }
 
@@ -27,7 +40,7 @@ export async function uploadImage(
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
     const path = `${timestamp}_${sanitizedFileName}`;
 
-    const { data, error } = await supabase.storage
+    const { data, error } = await client.storage
       .from(bucket)
       .upload(path, file, {
         contentType: 'image/png',
@@ -41,7 +54,7 @@ export async function uploadImage(
     }
 
     // Obter URL pública
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = client.storage
       .from(bucket)
       .getPublicUrl(path);
 
@@ -60,12 +73,13 @@ export async function deleteImage(
   path: string,
   bucket: string = 'products'
 ): Promise<void> {
-  if (!supabase) {
+  const client = supabaseAdmin || supabase;
+  if (!client) {
     throw new Error('Supabase não configurado');
   }
 
   try {
-    const { error } = await supabase.storage.from(bucket).remove([path]);
+    const { error } = await client.storage.from(bucket).remove([path]);
 
     if (error) {
       console.error('Erro ao deletar imagem:', error);
