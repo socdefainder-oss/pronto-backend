@@ -20,11 +20,6 @@ import { ensureAdminExists } from "./lib/ensureAdmin.js";
 const app = express();
 
 /**
- * Body parser
- */
-app.use(express.json());
-
-/**
  * CORS - Middleware customizado para máximo controle
  */
 const corsOrigin = process.env.CORS_ORIGIN || "https://pronto-frontend-rust.vercel.app";
@@ -55,6 +50,13 @@ app.use((req, res, next) => {
   
   next();
 });
+
+/**
+ * Body parser
+ * Upload base64 precisa de limite maior que o padrão (100kb).
+ */
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 /**
  * Health check
