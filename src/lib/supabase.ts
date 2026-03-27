@@ -28,7 +28,8 @@ export const supabaseAdmin = supabaseUrl && supabaseServiceKey
 export async function uploadImage(
   file: Buffer,
   fileName: string,
-  bucket: string = 'products'
+  bucket: string = 'products',
+  mimeType: string = 'image/jpeg'
 ): Promise<{ url: string; path: string }> {
   const client = supabaseAdmin || supabase;
   if (!client) {
@@ -43,7 +44,7 @@ export async function uploadImage(
     const { data, error } = await client.storage
       .from(bucket)
       .upload(path, file, {
-        contentType: 'image/png',
+        contentType: mimeType,
         cacheControl: '3600',
         upsert: false,
       });

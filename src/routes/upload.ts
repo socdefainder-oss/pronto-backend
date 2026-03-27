@@ -16,6 +16,8 @@ uploadRoutes.post('/image', auth, async (req: AuthedRequest, res) => {
     }
 
     // Remove o prefixo data:image/png;base64, se existir
+    const matches = image.match(/^data:(image\/\w+);base64,/);
+    const mimeType = matches ? matches[1] : 'image/jpeg';
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
 
@@ -27,7 +29,7 @@ uploadRoutes.post('/image', auth, async (req: AuthedRequest, res) => {
     }
 
     // Faz upload para Supabase Storage
-    const result = await uploadImage(buffer, fileName, 'products');
+    const result = await uploadImage(buffer, fileName, 'products', mimeType);
 
     return res.json({
       success: true,
