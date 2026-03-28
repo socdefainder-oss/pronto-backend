@@ -116,6 +116,10 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
             options: group.options.map((option: typeof group.options[number]) => ({
               id: option.id,
               name: option.name,
+              pdvCode: option.pdvCode,
+              description: option.description,
+              maxQuantity: option.maxQuantity,
+              imageUrl: option.imageUrl,
               priceCents: option.priceCents,
               status: option.status,
               sortOrder: option.sortOrder,
@@ -145,6 +149,10 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
           options: group.options.map((option: typeof group.options[number]) => ({
             id: option.id,
             name: option.name,
+            pdvCode: option.pdvCode,
+            description: option.description,
+            maxQuantity: option.maxQuantity,
+            imageUrl: option.imageUrl,
             priceCents: option.priceCents,
             status: option.status,
             sortOrder: option.sortOrder,

@@ -7,6 +7,10 @@ export const catalogRoutes = Router();
 
 const complementOptionSchema = z.object({
   name: z.string().min(1),
+  pdvCode: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  maxQuantity: z.number().int().min(0).optional(),
+  imageUrl: z.string().optional().nullable(),
   priceCents: z.number().int().min(0),
   status: z.enum(["active", "inactive", "out_of_stock"]).optional(),
   sortOrder: z.number().int().optional(),
@@ -211,6 +215,10 @@ catalogRoutes.post("/products", auth, async (req: AuthedRequest, res) => {
             options: {
               create: group.options.map((option, optionIndex) => ({
                 name: option.name,
+                pdvCode: option.pdvCode ?? null,
+                description: option.description ?? null,
+                maxQuantity: option.maxQuantity ?? 0,
+                imageUrl: option.imageUrl ?? null,
                 priceCents: option.priceCents,
                 status: option.status ?? "active",
                 sortOrder: option.sortOrder ?? optionIndex,
@@ -332,6 +340,10 @@ catalogRoutes.patch("/products/:id", auth, async (req: AuthedRequest, res) => {
               options: {
                 create: group.options.map((option, optionIndex) => ({
                   name: option.name,
+                  pdvCode: option.pdvCode ?? null,
+                  description: option.description ?? null,
+                  maxQuantity: option.maxQuantity ?? 0,
+                  imageUrl: option.imageUrl ?? null,
                   priceCents: option.priceCents,
                   status: option.status ?? "active",
                   sortOrder: option.sortOrder ?? optionIndex,

@@ -193,6 +193,10 @@ model ProductComplementOption {
   id          String   @id @default(cuid())
   groupId     String
   name        String
+  pdvCode     String?
+  description String?
+  maxQuantity Int      @default(0)
+  imageUrl    String?
   priceCents  Int      @default(0)
   status      String   @default("active")
   sortOrder   Int      @default(0)
