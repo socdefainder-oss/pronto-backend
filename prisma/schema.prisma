@@ -73,6 +73,7 @@ model Restaurant {
   slogan      String? // Frase motivadora/tagline do restaurante
   address     String?
   logoUrl     String? // URL da logo/imagem do restaurante
+  bannerUrl   String? // URL do banner do restaurante (exibido no topo do cardápio digital)
   cnpj        String? // CNPJ do estabelecimento
   email       String? // Email de contato
   openingHours String? // Horário de funcionamento (ex: "Seg-Sex: 10h-22h")
