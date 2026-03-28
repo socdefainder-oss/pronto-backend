@@ -136,6 +136,7 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
     slogan: z.string().optional().nullable(),
     address: z.string().optional().nullable(),
     logoUrl: z.string().optional().nullable(),
+    bannerUrl: z.string().optional().nullable(),
     cnpj: z.string().optional().nullable(),
     email: z.string().optional().nullable(),
     openingHours: z.string().optional().nullable(),
@@ -190,7 +191,9 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
     id,
     userId,
     logoUrl: data.logoUrl,
-    hasLogoUrl: !!data.logoUrl
+    hasLogoUrl: !!data.logoUrl,
+    bannerUrl: data.bannerUrl,
+    hasBannerUrl: !!data.bannerUrl
   });
 
   // Verifica se restaurante existe
@@ -237,7 +240,8 @@ restaurantRoutes.patch("/:id", auth, async (req: AuthedRequest, res) => {
   console.log("[PATCH /restaurants/:id] Restaurant updated:", {
     id: updated.id,
     name: updated.name,
-    logoUrl: updated.logoUrl
+    logoUrl: updated.logoUrl,
+    bannerUrl: updated.bannerUrl
   });
 
   return res.json(updated);

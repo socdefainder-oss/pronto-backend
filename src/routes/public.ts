@@ -77,6 +77,7 @@ publicRoutes.get("/restaurants/:slug", async (req, res) => {
       slogan: restaurant.slogan,
       address: restaurant.address,
       logoUrl: restaurant.logoUrl,
+      bannerUrl: restaurant.bannerUrl,
       cnpj: restaurant.cnpj,
       email: restaurant.email,
       openingHours: restaurant.openingHours,
