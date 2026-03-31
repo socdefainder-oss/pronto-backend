@@ -219,8 +219,19 @@ router.post('/setup-subaccount', async (req, res) => {
     }
 
     // Preparar dados para criar subconta
-    const normalizedPhone = (restaurant.phone || '').replace(/\D/g, '');
-    const mobilePhone = normalizedPhone.length >= 10 ? normalizedPhone : '11999999999';
+    let normalizedPhone = (restaurant.phone || '').replace(/\D/g, '');
+    if (normalizedPhone.startsWith('55') && normalizedPhone.length >= 12) {
+      normalizedPhone = normalizedPhone.slice(2);
+    }
+
+    // Asaas espera celular brasileiro como DDD + 9 digitos (11 no total)
+    let mobilePhone = normalizedPhone;
+    if (mobilePhone.length === 10) {
+      mobilePhone = `${mobilePhone.slice(0, 2)}9${mobilePhone.slice(2)}`;
+    }
+    if (mobilePhone.length !== 11) {
+      mobilePhone = '11999999999';
+    }
 
     const subaccountData = {
       name: restaurant.name,
