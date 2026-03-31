@@ -106,6 +106,13 @@ model Restaurant {
   cnpjAnalyzedAt      String? // Data da análise do CNPJ
   schedules           Json? // Horários de funcionamento por dia da semana
   
+  // Integração ASAAS
+  asaasSubaccountId   String? // ID da subconta ASAAS para esta loja
+  asaasSubaccountApiKey String? // API Key da subconta ASAAS
+  asaasSplitPercentage Decimal @default(5.0) // Percentual que vai para conta master (ex: 5%)
+  asaasStatus String @default("inactive") // Status: inactive, pending, active
+  asaasCreatedAt DateTime? // Data de criação da subconta
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

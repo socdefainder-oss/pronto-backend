@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma';
-import { createCustomer, createCharge, getPixQrCode } from '../lib/asaas';
+import { createCustomer, createCharge, getPixQrCode, createSubaccount, getAccountInfo } from '../lib/asaas';
 
 const router = Router();
 
@@ -114,8 +114,11 @@ router.post('/create', async (req, res) => {
       console.log('Dados do titular do cartão:', JSON.stringify(chargeData.creditCardHolderInfo, null, 2));
     }
 
-    // Criar cobrança no ASAAS
-    const charge = await createCharge(chargeData);
+    // Criar cobrança no ASAAS (usando subconta se configurada)
+    const charge = await createCharge(
+      chargeData, 
+      order.restaurant.asaasSubaccountApiKey || undefined
+    );
 
     // Atualizar pedido com ID da cobrança
     await prisma.order.update({
@@ -168,6 +171,207 @@ router.get('/:paymentId/status', async (req, res) => {
   } catch (error: any) {
     console.error('Erro ao buscar status do pagamento:', error);
     return res.status(500).json({ error: 'Erro ao buscar status do pagamento' });
+  }
+});
+
+// ============ SUBCONTAS ASAAS ============
+
+/**
+ * POST /api/asaas/setup-subaccount
+ * Criar e configurar subconta ASAAS para uma loja
+ * Body: { restaurantId: string, splitPercentage?: number }
+ */
+router.post('/setup-subaccount', async (req, res) => {
+  try {
+    const { restaurantId, splitPercentage } = req.body;
+
+    if (!restaurantId) {
+      return res.status(400).json({ error: 'restaurantId é obrigatório' });
+    }
+
+    // Buscar restaurante
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurante não encontrado' });
+    }
+
+    // Se já tem subconta ativa, retornar dados existentes
+    if (restaurant.asaasSubaccountId && restaurant.asaasStatus === 'active') {
+      return res.json({
+        message: 'Subconta já configurada',
+        subaccountId: restaurant.asaasSubaccountId,
+        status: restaurant.asaasStatus,
+      });
+    }
+
+    console.log(`📱 Criando subconta ASAAS para: ${restaurant.name}`);
+
+    // Extrair CNPJ/CPF (remover caracteres especiais)
+    const cnpjCpf = (restaurant.cnpj || '').replace(/\D/g, '');
+    
+    if (!cnpjCpf || cnpjCpf.length < 11) {
+      return res.status(400).json({ 
+        error: 'Restaurante precisa de CNPJ válido cadastrado' 
+      });
+    }
+
+    // Preparar dados para criar subconta
+    const subaccountData = {
+      name: restaurant.name,
+      email: restaurant.email || `${restaurant.id}@subaccount.pronto`,
+      loginEmail: restaurant.email || `${restaurant.id}@subaccount.pronto`,
+      cpfCnpj: cnpjCpf,
+      phone: (restaurant.phone || '').replace(/\D/g, '') || '1112345678',
+      site: restaurant.companyName || '',
+      type: cnpjCpf.length === 14 ? 'COMPANY' : 'INDIVIDUAL',
+    };
+
+    // Criar subconta via API ASAAS
+    const subaccount = await createSubaccount(subaccountData);
+
+    // Salvar dados da subconta no banco
+    const updated = await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: {
+        asaasSubaccountId: subaccount.id,
+        asaasSubaccountApiKey: subaccount.apiKey,
+        asaasSplitPercentage: splitPercentage ? parseFloat(splitPercentage.toString()) : 5.0,
+        asaasStatus: 'active',
+        asaasCreatedAt: new Date(),
+      },
+    });
+
+    console.log(`✅ Subconta criada: ${subaccount.id}`);
+
+    return res.json({
+      success: true,
+      message: 'Subconta criada e configurada com sucesso',
+      restaurant: {
+        id: updated.id,
+        name: updated.name,
+        asaasSubaccountId: updated.asaasSubaccountId,
+        asaasStatus: updated.asaasStatus,
+        asaasSplitPercentage: updated.asaasSplitPercentage,
+        asaasCreatedAt: updated.asaasCreatedAt,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao configurar subconta:', error);
+    return res.status(500).json({ 
+      error: error.message || 'Erro ao configurar subconta ASAAS'
+    });
+  }
+});
+
+/**
+ * GET /api/asaas/restaurant/:restaurantId/subaccount
+ * Obter status e informações da subconta
+ */
+router.get('/restaurant/:restaurantId/subaccount', async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: {
+        id: true,
+        name: true,
+        asaasSubaccountId: true,
+        asaasStatus: true,
+        asaasSplitPercentage: true,
+        asaasCreatedAt: true,
+      },
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurante não encontrado' });
+    }
+
+    if (!restaurant.asaasSubaccountId) {
+      return res.json({
+        message: 'Subconta não configurada',
+        subaccountStatus: 'not-configured',
+        restaurant,
+      });
+    }
+
+    // Se tiver API key, buscar info da conta no ASAAS (opcional)
+    // Descomente para validar subconta em tempo real
+    /*
+    const accountInfo = await getAccountInfo(restaurant.asaasSubaccountApiKey);
+    */
+
+    return res.json({
+      success: true,
+      restaurant: {
+        ...restaurant,
+        asaasSplitPercentage: parseFloat(restaurant.asaasSplitPercentage.toString()),
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro ao buscar info da subconta:', error);
+    return res.status(500).json({ 
+      error: 'Erro ao buscar informações da subconta'
+    });
+  }
+});
+
+/**
+ * PUT /api/asaas/restaurant/:restaurantId/subaccount
+ * Atualizar configurações da subconta (ex: splitPercentage)
+ */
+router.put('/restaurant/:restaurantId/subaccount', async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const { splitPercentage } = req.body;
+
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurante não encontrado' });
+    }
+
+    if (!restaurant.asaasSubaccountId) {
+      return res.status(400).json({ error: 'Subconta não configurada' });
+    }
+
+    if (splitPercentage !== undefined) {
+      const percentage = parseFloat(splitPercentage.toString());
+      if (percentage < 0 || percentage > 100) {
+        return res.status(400).json({ error: 'Percentual deve estar entre 0 e 100' });
+      }
+    }
+
+    const updated = await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: {
+        ...(splitPercentage !== undefined && { asaasSplitPercentage: splitPercentage }),
+      },
+      select: {
+        id: true,
+        name: true,
+        asaasSubaccountId: true,
+        asaasStatus: true,
+        asaasSplitPercentage: true,
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Subconta atualizada',
+      restaurant: {
+        ...updated,
+        asaasSplitPercentage: parseFloat(updated.asaasSplitPercentage.toString()),
+      },
+    });
+  } catch (error: any) {
+    console.error('Erro ao atualizar subconta:', error);
+    return res.status(500).json({ error: 'Erro ao atualizar subconta' });
   }
 });
 

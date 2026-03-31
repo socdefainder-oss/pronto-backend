@@ -71,9 +71,23 @@ export async function createCustomer(data: CreateCustomerData) {
   }
 }
 
-export async function createCharge(data: CreateChargeData) {
+export async function createCharge(data: CreateChargeData, subaccountApiKey?: string) {
   try {
-    const response = await asaasApi.post('/payments', data);
+    let response;
+    
+    if (subaccountApiKey) {
+      // Usar API key da subconta se fornecida
+      response = await axios.post(`${ASAAS_BASE_URL}/payments`, data, {
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': subaccountApiKey,
+        },
+      });
+    } else {
+      // Usar API global (master account)
+      response = await asaasApi.post('/payments', data);
+    }
+    
     return response.data;
   } catch (error: any) {
     console.error('Erro ao criar cobrança no ASAAS:', error.response?.data || error.message);
@@ -98,6 +112,122 @@ export async function getPixQrCode(chargeId: string) {
   } catch (error: any) {
     console.error('Erro ao buscar QR Code PIX:', error.response?.data || error.message);
     throw new Error('Falha ao buscar QR Code PIX');
+  }
+}
+
+/**
+ * Criar subconta ASAAS para uma loja
+ * Retorna { id: string, apiKey: string }
+ */
+export async function createSubaccount(data: {
+  name: string;
+  email: string;
+  loginEmail: string;
+  cpfCnpj: string;
+  phone: string;
+  site?: string;
+  type?: string;
+}) {
+  try {
+    console.log('Criando subconta ASAAS:', data.name);
+    const response = await asaasApi.post('/accounts', {
+      name: data.name,
+      email: data.email,
+      loginEmail: data.loginEmail,
+      cpfCnpj: data.cpfCnpj,
+      phone: data.phone,
+      site: data.site || '',
+      type: data.type || 'INDIVIDUAL',
+    });
+    
+    console.log('✅ Subconta criada:', response.data.id);
+    return {
+      id: response.data.id,
+      apiKey: response.data.apiKey,
+      name: response.data.name,
+      email: response.data.email,
+    };
+  } catch (error: any) {
+    console.error('❌ Erro ao criar subconta ASAAS:');
+    console.error('Status:', error.response?.status);
+    console.error('Data:', JSON.stringify(error.response?.data, null, 2));
+    throw new Error(`Falha ao criar subconta ASAAS: ${error.response?.data?.errors?.[0]?.description || error.message}`);
+  }
+}
+
+/**
+ * Criar cobrança usando API Key de subconta
+ * Útil quando você quer fazer pagamentos em nome da subconta
+ */
+export async function createChargeForSubaccount(
+  subaccountApiKey: string,
+  data: CreateChargeData
+) {
+  try {
+    const response = await axios.post(`${ASAAS_BASE_URL}/payments`, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        'access_token': subaccountApiKey,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao criar cobrança na subconta:', error.response?.data || error.message);
+    throw new Error('Falha ao criar cobrança na subconta ASAAS');
+  }
+}
+
+/**
+ * Configurar split de pagamentos
+ * Parte do pagamento vai para subconta, parte para conta master
+ */
+export interface SplitConfig {
+  walletId: string; // ID da carteira da subconta
+  splitConfig: Array<{
+    walletId: string; // Para onde vai o split
+    percentualValue: number; // Percentual (0-100)
+  }>;
+}
+
+export async function configureSplit(
+  subaccountApiKey: string,
+  splitConfig: SplitConfig
+) {
+  try {
+    console.log('Configurando split para subconta...');
+    // Nota: O split é configurado geralmente na conta master
+    // Esta é uma função de referência - verifique a documentação do ASAAS
+    const response = await axios.post(
+      `${ASAAS_BASE_URL}/myWalletSplits`,
+      splitConfig,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': subaccountApiKey,
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao configurar split:', error.response?.data || error.message);
+    throw new Error('Falha ao configurar split ASAAS');
+  }
+}
+
+/**
+ * Obter informações da conta/subconta
+ */
+export async function getAccountInfo(apiKey: string) {
+  try {
+    const response = await axios.get(`${ASAAS_BASE_URL}/myInfo`, {
+      headers: {
+        'access_token': apiKey,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar info da conta:', error.response?.data || error.message);
+    throw new Error('Falha ao buscar informações da conta');
   }
 }
 
