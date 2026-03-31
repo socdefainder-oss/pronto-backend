@@ -224,7 +224,7 @@ router.post('/setup-subaccount', async (req, res) => {
       normalizedPhone = normalizedPhone.slice(2);
     }
 
-    // Asaas espera celular brasileiro como DDD + 9 digitos (11 no total)
+    // Asaas espera celular brasileiro no padrão nacional: DDD + 9 dígitos
     let mobilePhone = normalizedPhone;
     if (mobilePhone.length === 10) {
       mobilePhone = `${mobilePhone.slice(0, 2)}9${mobilePhone.slice(2)}`;
@@ -233,16 +233,27 @@ router.post('/setup-subaccount', async (req, res) => {
       mobilePhone = '11999999999';
     }
 
+    // Campo phone aceita fixo; usamos DDD + 8 dígitos como fallback
+    let phone = normalizedPhone;
+    if (phone.length === 11 && phone[2] === '9') {
+      phone = `${phone.slice(0, 2)}${phone.slice(3)}`;
+    }
+    if (phone.length !== 10) {
+      phone = '1132300606';
+    }
+
     const subaccountData = {
       name: restaurant.name,
       email: restaurant.email || `${restaurant.id}@subaccount.pronto`,
       loginEmail: restaurant.email || `${restaurant.id}@subaccount.pronto`,
       cpfCnpj: cnpjCpf,
-      phone: normalizedPhone || '1133333333',
+      phone,
       mobilePhone,
+      birthDate: undefined,
       incomeValue: 5000,
       address: restaurant.address || 'Endereco nao informado',
       addressNumber: 'S/N',
+      complement: '',
       province: 'Centro',
       postalCode: '01310100',
       companyType: (restaurant.isMEI ? 'MEI' : 'LIMITED') as 'MEI' | 'LIMITED',
