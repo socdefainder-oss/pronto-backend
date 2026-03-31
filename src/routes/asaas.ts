@@ -25,8 +25,16 @@ router.post('/create', async (req, res) => {
       return res.status(404).json({ error: 'Pedido não encontrado' });
     }
 
+    const subaccountApiKey = order.restaurant.asaasSubaccountApiKey || undefined;
+
     // Criar ou buscar cliente no ASAAS
     let asaasCustomerId = order.customer.asaasCustomerId;
+
+    // Customer IDs não são compartilhados entre conta master e subcontas.
+    // Se a cobrança for para subconta, sempre criaremos/buscaremos cliente no contexto da subconta.
+    if (subaccountApiKey) {
+      asaasCustomerId = null;
+    }
     
     if (!asaasCustomerId) {
       const customerData: any = {
@@ -46,14 +54,17 @@ router.post('/create', async (req, res) => {
         customerData.postalCode = order.address.zipCode || undefined;
       }
 
-      const asaasCustomer = await createCustomer(customerData);
+      const asaasCustomer = await createCustomer(customerData, subaccountApiKey);
       asaasCustomerId = asaasCustomer.id;
 
-      // Salvar o ID do cliente ASAAS
-      await prisma.customer.update({
-        where: { id: order.customer.id },
-        data: { asaasCustomerId },
-      });
+      // Só persiste no cliente quando a conta usada é a master.
+      // Para subcontas, o ID do cliente é específico daquela subconta.
+      if (!subaccountApiKey) {
+        await prisma.customer.update({
+          where: { id: order.customer.id },
+          data: { asaasCustomerId },
+        });
+      }
     }
 
     // Preparar dados da cobrança
@@ -115,10 +126,7 @@ router.post('/create', async (req, res) => {
     }
 
     // Criar cobrança no ASAAS (usando subconta se configurada)
-    const charge = await createCharge(
-      chargeData, 
-      order.restaurant.asaasSubaccountApiKey || undefined
-    );
+    const charge = await createCharge(chargeData, subaccountApiKey);
 
     // Atualizar pedido com ID da cobrança
     await prisma.order.update({

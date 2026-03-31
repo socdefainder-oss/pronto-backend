@@ -56,10 +56,22 @@ export interface CreateCustomerData {
   externalReference?: string;
 }
 
-export async function createCustomer(data: CreateCustomerData) {
+export async function createCustomer(data: CreateCustomerData, subaccountApiKey?: string) {
   try {
     console.log('Criando cliente no ASAAS com dados:', JSON.stringify(data, null, 2));
-    const response = await asaasApi.post('/customers', data);
+    let response;
+
+    if (subaccountApiKey) {
+      response = await axios.post(`${ASAAS_BASE_URL}/customers`, data, {
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': subaccountApiKey,
+        },
+      });
+    } else {
+      response = await asaasApi.post('/customers', data);
+    }
+
     console.log('Cliente criado com sucesso:', response.data.id);
     return response.data;
   } catch (error: any) {
