@@ -125,6 +125,13 @@ export async function createSubaccount(data: {
   loginEmail: string;
   cpfCnpj: string;
   phone: string;
+  mobilePhone: string;
+  incomeValue: number;
+  address: string;
+  addressNumber: string;
+  province: string;
+  postalCode: string;
+  companyType?: 'MEI' | 'LIMITED' | 'INDIVIDUAL' | 'ASSOCIATION';
   site?: string;
   type?: string;
 }) {
@@ -136,6 +143,13 @@ export async function createSubaccount(data: {
       loginEmail: data.loginEmail,
       cpfCnpj: data.cpfCnpj,
       phone: data.phone,
+      mobilePhone: data.mobilePhone,
+      incomeValue: data.incomeValue,
+      address: data.address,
+      addressNumber: data.addressNumber,
+      province: data.province,
+      postalCode: data.postalCode,
+      companyType: data.companyType,
       site: data.site || '',
       type: data.type || 'INDIVIDUAL',
     });

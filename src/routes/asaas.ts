@@ -219,12 +219,22 @@ router.post('/setup-subaccount', async (req, res) => {
     }
 
     // Preparar dados para criar subconta
+    const normalizedPhone = (restaurant.phone || '').replace(/\D/g, '');
+    const mobilePhone = normalizedPhone.length >= 10 ? normalizedPhone : '11999999999';
+
     const subaccountData = {
       name: restaurant.name,
       email: restaurant.email || `${restaurant.id}@subaccount.pronto`,
       loginEmail: restaurant.email || `${restaurant.id}@subaccount.pronto`,
       cpfCnpj: cnpjCpf,
-      phone: (restaurant.phone || '').replace(/\D/g, '') || '1112345678',
+      phone: normalizedPhone || '1133333333',
+      mobilePhone,
+      incomeValue: 5000,
+      address: restaurant.address || 'Endereco nao informado',
+      addressNumber: 'S/N',
+      province: 'Centro',
+      postalCode: '01310100',
+      companyType: (restaurant.isMEI ? 'MEI' : 'LIMITED') as 'MEI' | 'LIMITED',
       site: restaurant.companyName || '',
       type: cnpjCpf.length === 14 ? 'COMPANY' : 'INDIVIDUAL',
     };
