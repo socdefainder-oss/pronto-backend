@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "npm install && npx --yes prisma@5.18.0 generate && tsc -p tsconfig.json",
-    "start": "node scripts/deploy.cjs",
+    "build": "npx --yes prisma@5.18.0 generate && tsc -p tsconfig.json",
+    "start": "node dist/server.js",
     "start:server": "node dist/server.js",
     "postinstall": "node scripts/ensure-db.js",
     "fix:migrations": "node scripts/fix-migrations.js",
