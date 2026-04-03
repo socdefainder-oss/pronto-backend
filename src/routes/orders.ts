@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import { auth, AuthedRequest } from "../middlewares/auth.js";
+import { hasRestaurantAccess } from "../lib/restaurantAccess.js";
 
 const ordersRoutes = Router();
 
@@ -256,7 +257,8 @@ ordersRoutes.get("/restaurant/:restaurantId", auth, async (req: AuthedRequest, r
       where: { id: restaurantId },
     });
 
-    if (!restaurant || restaurant.ownerId !== req.userId) {
+    // Verificar se o usuário tem acesso ao restaurante
+    if (!restaurant || !(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(403).json({ error: "Acesso negado" });
     }
 
@@ -324,8 +326,8 @@ ordersRoutes.get("/:orderId", auth, async (req: AuthedRequest, res: Response) =>
       return res.status(404).json({ error: "Pedido não encontrado" });
     }
 
-    // Verificar se o usuário é dono do restaurante
-    if (order.restaurant.ownerId !== req.userId) {
+    // Verificar se o usuário tem acesso ao restaurante do pedido
+    if (!(await hasRestaurantAccess(order.restaurantId, req.userId!))) {
       return res.status(403).json({ error: "Acesso negado" });
     }
 
@@ -365,8 +367,8 @@ ordersRoutes.put("/:orderId/status", auth, async (req: AuthedRequest, res: Respo
       return res.status(404).json({ error: "Pedido não encontrado" });
     }
 
-    // Verificar se o usuário é dono do restaurante
-    if (order.restaurant.ownerId !== req.userId) {
+    // Verificar se o usuário tem acesso ao restaurante do pedido
+    if (!(await hasRestaurantAccess(order.restaurantId, req.userId!))) {
       return res.status(403).json({ error: "Acesso negado" });
     }
 
@@ -412,8 +414,8 @@ ordersRoutes.put("/:orderId/payment", auth, async (req: AuthedRequest, res: Resp
       return res.status(404).json({ error: "Pedido não encontrado" });
     }
 
-    // Verificar se o usuário é dono do restaurante
-    if (order.restaurant.ownerId !== req.userId) {
+    // Verificar se o usuário tem acesso ao restaurante do pedido
+    if (!(await hasRestaurantAccess(order.restaurantId, req.userId!))) {
       return res.status(403).json({ error: "Acesso negado" });
     }
 
@@ -445,7 +447,8 @@ ordersRoutes.get("/restaurant/:restaurantId/stats", auth, async (req: AuthedRequ
       where: { id: restaurantId },
     });
 
-    if (!restaurant || restaurant.ownerId !== req.userId) {
+    // Verificar se o usuário tem acesso ao restaurante
+    if (!restaurant || !(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(403).json({ error: "Acesso negado" });
     }
 

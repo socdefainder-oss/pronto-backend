@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { auth, type AuthedRequest } from "../middlewares/auth.js";
+import { hasRestaurantAccess } from "../lib/restaurantAccess.js";
 
 export const catalogRoutes = Router();
 
@@ -39,11 +40,10 @@ catalogRoutes.post("/categories", auth, async (req: AuthedRequest, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
-  // Garante que o restaurante é do user
-  const r = await prisma.restaurant.findFirst({
-    where: { id: parsed.data.restaurantId, ownerId: req.userId! }
-  });
-  if (!r) return res.status(403).json({ error: "Sem permissão" });
+  // Garante que o usuário tem acesso ao restaurante (dono ou membro)
+  if (!(await hasRestaurantAccess(parsed.data.restaurantId, req.userId!))) {
+    return res.status(403).json({ error: "Sem permissão" });
+  }
 
   const category = await prisma.category.create({
     data: {
@@ -61,10 +61,9 @@ catalogRoutes.post("/categories", auth, async (req: AuthedRequest, res) => {
 catalogRoutes.get("/categories/:restaurantId", auth, async (req: AuthedRequest, res) => {
   const { restaurantId } = req.params;
 
-  const r = await prisma.restaurant.findFirst({ 
-    where: { id: restaurantId, ownerId: req.userId! } 
-  });
-  if (!r) return res.status(403).json({ error: "Sem permissão" });
+  if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
+    return res.status(403).json({ error: "Sem permissão" });
+  }
 
   const categories = await prisma.category.findMany({
     where: { restaurantId },
@@ -107,7 +106,7 @@ catalogRoutes.patch("/categories/:id", auth, async (req: AuthedRequest, res) => 
   if (!category) return res.status(404).json({ error: "Categoria não encontrada" });
 
   // Verifica permissão via restaurante
-  if (category.restaurant.ownerId !== req.userId!) {
+  if (!(await hasRestaurantAccess(category.restaurant.id, req.userId!))) {
     return res.status(403).json({ error: "Sem permissão" });
   }
 
@@ -134,7 +133,7 @@ catalogRoutes.delete("/categories/:id", auth, async (req: AuthedRequest, res) =>
   if (!category) return res.status(404).json({ error: "Categoria não encontrada" });
 
   // Verifica permissão via restaurante
-  if (category.restaurant.ownerId !== req.userId!) {
+  if (!(await hasRestaurantAccess(category.restaurant.id, req.userId!))) {
     return res.status(403).json({ error: "Sem permissão" });
   }
 
@@ -172,10 +171,10 @@ catalogRoutes.post("/products", auth, async (req: AuthedRequest, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
-  const r = await prisma.restaurant.findFirst({
-    where: { id: parsed.data.restaurantId, ownerId: req.userId! }
-  });
-  if (!r) return res.status(403).json({ error: "Sem permissão" });
+  // Verifica se o usuário tem acesso ao restaurante (dono ou membro)
+  if (!(await hasRestaurantAccess(parsed.data.restaurantId, req.userId!))) {
+    return res.status(403).json({ error: "Sem permissão" });
+  }
 
   // Se tiver categoryId, verifica se a categoria pertence ao restaurante
   if (parsed.data.categoryId) {
@@ -248,10 +247,9 @@ catalogRoutes.post("/products", auth, async (req: AuthedRequest, res) => {
 catalogRoutes.get("/products/:restaurantId", auth, async (req: AuthedRequest, res) => {
   const { restaurantId } = req.params;
 
-  const r = await prisma.restaurant.findFirst({ 
-    where: { id: restaurantId, ownerId: req.userId! } 
-  });
-  if (!r) return res.status(403).json({ error: "Sem permissão" });
+  if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
+    return res.status(403).json({ error: "Sem permissão" });
+  }
 
   const products = await prisma.product.findMany({
     where: { restaurantId },
@@ -300,7 +298,7 @@ catalogRoutes.patch("/products/:id", auth, async (req: AuthedRequest, res) => {
   
   if (!product) return res.status(404).json({ error: "Produto não encontrado" });
 
-  if (product.restaurant.ownerId !== req.userId!) {
+  if (!(await hasRestaurantAccess(product.restaurant.id, req.userId!))) {
     return res.status(403).json({ error: "Sem permissão" });
   }
 
@@ -390,7 +388,7 @@ catalogRoutes.delete("/products/:id", auth, async (req: AuthedRequest, res) => {
   
   if (!product) return res.status(404).json({ error: "Produto não encontrado" });
 
-  if (product.restaurant.ownerId !== req.userId!) {
+  if (!(await hasRestaurantAccess(product.restaurant.id, req.userId!))) {
     return res.status(403).json({ error: "Sem permissão" });
   }
 
@@ -404,10 +402,9 @@ catalogRoutes.delete("/products/:id", auth, async (req: AuthedRequest, res) => {
 catalogRoutes.get("/stats/:restaurantId", auth, async (req: AuthedRequest, res) => {
   const { restaurantId } = req.params;
 
-  const r = await prisma.restaurant.findFirst({ 
-    where: { id: restaurantId, ownerId: req.userId! } 
-  });
-  if (!r) return res.status(403).json({ error: "Sem permissão" });
+  if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
+    return res.status(403).json({ error: "Sem permissão" });
+  }
 
   const [categories, products] = await Promise.all([
     prisma.category.findMany({

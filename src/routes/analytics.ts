@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { auth, AuthedRequest } from "../middlewares/auth.js";
+import { hasRestaurantAccess } from "../lib/restaurantAccess.js";
 
 const router = Router();
 
@@ -12,11 +13,7 @@ router.get("/:restaurantId/sales-by-day", auth, async (req: AuthedRequest, res) 
     const { days = "30" } = req.query;
 
     // Verificar permissão
-    const restaurant = await prisma.restaurant.findFirst({
-      where: { id: restaurantId, ownerId: req.userId },
-    });
-
-    if (!restaurant) {
+    if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(404).json({ error: "Restaurante não encontrado" });
     }
 
@@ -76,11 +73,7 @@ router.get("/:restaurantId/peak-hours", auth, async (req: AuthedRequest, res) =>
     const { days = "30" } = req.query;
 
     // Verificar permissão
-    const restaurant = await prisma.restaurant.findFirst({
-      where: { id: restaurantId, ownerId: req.userId },
-    });
-
-    if (!restaurant) {
+    if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(404).json({ error: "Restaurante não encontrado" });
     }
 
@@ -131,11 +124,7 @@ router.get("/:restaurantId/top-products", auth, async (req: AuthedRequest, res) 
     const { limit = "10", days = "30" } = req.query;
 
     // Verificar permissão
-    const restaurant = await prisma.restaurant.findFirst({
-      where: { id: restaurantId, ownerId: req.userId },
-    });
-
-    if (!restaurant) {
+    if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(404).json({ error: "Restaurante não encontrado" });
     }
 
@@ -210,11 +199,7 @@ router.get("/:restaurantId/revenue-by-category", auth, async (req: AuthedRequest
     const { days = "30" } = req.query;
 
     // Verificar permissão
-    const restaurant = await prisma.restaurant.findFirst({
-      where: { id: restaurantId, ownerId: req.userId },
-    });
-
-    if (!restaurant) {
+    if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(404).json({ error: "Restaurante não encontrado" });
     }
 
@@ -304,11 +289,7 @@ router.get("/:restaurantId/customer-insights", auth, async (req: AuthedRequest, 
     const { days = "30" } = req.query;
 
     // Verificar permissão
-    const restaurant = await prisma.restaurant.findFirst({
-      where: { id: restaurantId, ownerId: req.userId },
-    });
-
-    if (!restaurant) {
+    if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(404).json({ error: "Restaurante não encontrado" });
     }
 
@@ -400,11 +381,7 @@ router.get("/:restaurantId/overview", auth, async (req: AuthedRequest, res) => {
     const { restaurantId } = req.params;
 
     // Verificar permissão
-    const restaurant = await prisma.restaurant.findFirst({
-      where: { id: restaurantId, ownerId: req.userId },
-    });
-
-    if (!restaurant) {
+    if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(404).json({ error: "Restaurante não encontrado" });
     }
 

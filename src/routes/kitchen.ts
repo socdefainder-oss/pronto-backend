@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { auth, type AuthedRequest } from "../middlewares/auth.js";
+import { hasRestaurantAccess } from "../lib/restaurantAccess.js";
 
 const router = Router();
 
@@ -11,14 +12,7 @@ router.get("/:restaurantId/orders", auth, async (req: AuthedRequest, res) => {
     const { status, category } = req.query;
 
     // Verificar acesso ao restaurante
-    const restaurant = await prisma.restaurant.findFirst({
-      where: {
-        id: restaurantId,
-        ownerId: req.userId!,
-      },
-    });
-
-    if (!restaurant) {
+    if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(403).json({ error: "Acesso negado" });
     }
 
@@ -102,17 +96,10 @@ router.patch("/orders/:id/status", auth, async (req: AuthedRequest, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Verificar se o pedido pertence ao usuário
-    const order = await prisma.order.findFirst({
-      where: {
-        id,
-        restaurant: {
-          ownerId: req.userId!,
-        },
-      },
-    });
+    // Verificar se o pedido pertence ao restaurante que o usuário pode acessar
+    const order = await prisma.order.findUnique({ where: { id } });
 
-    if (!order) {
+    if (!order || !(await hasRestaurantAccess(order.restaurantId, req.userId!))) {
       return res.status(403).json({ error: "Acesso negado" });
     }
 
@@ -154,17 +141,10 @@ router.patch("/orders/:id/priority", auth, async (req: AuthedRequest, res) => {
     const { id } = req.params;
     const { priority } = req.body;
 
-    // Verificar se o pedido pertence ao usuário
-    const order = await prisma.order.findFirst({
-      where: {
-        id,
-        restaurant: {
-          ownerId: req.userId!,
-        },
-      },
-    });
+    // Verificar se o pedido pertence ao restaurante que o usuário pode acessar
+    const order = await prisma.order.findUnique({ where: { id } });
 
-    if (!order) {
+    if (!order || !(await hasRestaurantAccess(order.restaurantId, req.userId!))) {
       return res.status(403).json({ error: "Acesso negado" });
     }
 
@@ -186,17 +166,10 @@ router.patch("/orders/:id/notes", auth, async (req: AuthedRequest, res) => {
     const { id } = req.params;
     const { kitchenNotes } = req.body;
 
-    // Verificar se o pedido pertence ao usuário
-    const order = await prisma.order.findFirst({
-      where: {
-        id,
-        restaurant: {
-          ownerId: req.userId!,
-        },
-      },
-    });
+    // Verificar se o pedido pertence ao restaurante que o usuário pode acessar
+    const orderForNotes = await prisma.order.findUnique({ where: { id } });
 
-    if (!order) {
+    if (!orderForNotes || !(await hasRestaurantAccess(orderForNotes.restaurantId, req.userId!))) {
       return res.status(403).json({ error: "Acesso negado" });
     }
 
@@ -218,14 +191,7 @@ router.get("/:restaurantId/stats", auth, async (req: AuthedRequest, res) => {
     const { restaurantId } = req.params;
 
     // Verificar acesso ao restaurante
-    const restaurant = await prisma.restaurant.findFirst({
-      where: {
-        id: restaurantId,
-        ownerId: req.userId!,
-      },
-    });
-
-    if (!restaurant) {
+    if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(403).json({ error: "Acesso negado" });
     }
 

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { auth, AuthedRequest } from "../middlewares/auth.js";
+import { hasRestaurantAccess } from "../lib/restaurantAccess.js";
 
 const router = Router();
 
@@ -9,15 +10,8 @@ router.get("/restaurant/:restaurantId", auth, async (req: AuthedRequest, res) =>
   try {
     const { restaurantId } = req.params;
 
-    // Verificar se o usuário é dono do restaurante
-    const restaurant = await prisma.restaurant.findFirst({
-      where: {
-        id: restaurantId,
-        ownerId: req.userId,
-      },
-    });
-
-    if (!restaurant) {
+    // Verificar se o usuário tem acesso ao restaurante
+    if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(404).json({ error: "Restaurante não encontrado" });
     }
 
@@ -89,15 +83,8 @@ router.post("/", auth, async (req: AuthedRequest, res) => {
       return res.status(400).json({ error: "Campos obrigatórios faltando" });
     }
 
-    // Verificar se o usuário é dono do restaurante
-    const restaurant = await prisma.restaurant.findFirst({
-      where: {
-        id: restaurantId,
-        ownerId: req.userId,
-      },
-    });
-
-    if (!restaurant) {
+    // Verificar se o usuário tem acesso ao restaurante
+    if (!(await hasRestaurantAccess(restaurantId, req.userId!))) {
       return res.status(404).json({ error: "Restaurante não encontrado" });
     }
 
@@ -142,17 +129,10 @@ router.put("/:id", auth, async (req: AuthedRequest, res) => {
       isActive,
     } = req.body;
 
-    // Verificar se o banner existe e o usuário é dono
-    const existingBanner = await prisma.banner.findFirst({
-      where: {
-        id,
-        restaurant: {
-          ownerId: req.userId,
-        },
-      },
-    });
+    // Verificar se o banner existe e o usuário tem acesso
+    const existingBanner = await prisma.banner.findUnique({ where: { id } });
 
-    if (!existingBanner) {
+    if (!existingBanner || !(await hasRestaurantAccess(existingBanner.restaurantId, req.userId!))) {
       return res.status(404).json({ error: "Banner não encontrado" });
     }
 
@@ -185,17 +165,10 @@ router.delete("/:id", auth, async (req: AuthedRequest, res) => {
   try {
     const { id } = req.params;
 
-    // Verificar se o banner existe e o usuário é dono
-    const existingBanner = await prisma.banner.findFirst({
-      where: {
-        id,
-        restaurant: {
-          ownerId: req.userId,
-        },
-      },
-    });
+    // Verificar se o banner existe e o usuário tem acesso
+    const existingBanner = await prisma.banner.findUnique({ where: { id } });
 
-    if (!existingBanner) {
+    if (!existingBanner || !(await hasRestaurantAccess(existingBanner.restaurantId, req.userId!))) {
       return res.status(404).json({ error: "Banner não encontrado" });
     }
 
