@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma.js";
 import { signToken } from "../lib/jwt.js";
 import { supabase } from "../lib/supabase.js";
+import { auth, type AuthedRequest } from "../middlewares/auth.js";
 
 export const authRoutes = Router();
 
@@ -249,4 +250,26 @@ authRoutes.post("/login", async (req, res) => {
 
   const token = signToken({ userId: user.id, role: user.role });
   return res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+});
+
+/**
+ * GET /api/auth/me
+ * Retorna dados do usuário autenticado (validação de token)
+ */
+authRoutes.get("/me", auth, async (req: AuthedRequest, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, name: true, email: true, role: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    return res.json({ user });
+  } catch (err) {
+    console.error("[GET /me]", err);
+    return res.status(500).json({ error: "Erro interno do servidor" });
+  }
 });
