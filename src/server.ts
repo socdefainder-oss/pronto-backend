@@ -85,6 +85,17 @@ app.use("/api/upload", uploadRoutes);
 
 const port = Number(process.env.PORT || 3333);
 
+/**
+ * Global error handler — prevents unhandled Express errors from crashing the process
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("[Unhandled error]", err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
 app.listen(port, async () => {
   console.log(`✅ pronto-backend rodando na porta ${port}`);
   console.log(`🔒 CORS configurado para: ${corsOrigin}`);
