@@ -53,10 +53,10 @@ app.use((req, res, next) => {
 
 /**
  * Body parser
- * Upload base64 precisa de limite maior que o padrão (100kb).
+ * Upload base64 de vídeo cresce bastante; precisa de limite maior que o padrão.
  */
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "120mb" }));
+app.use(express.urlencoded({ extended: true, limit: "120mb" }));
 
 /**
  * Health check
@@ -91,9 +91,18 @@ const port = Number(process.env.PORT || 3333);
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("[Unhandled error]", err);
-  if (!res.headersSent) {
-    res.status(500).json({ error: "Erro interno do servidor" });
+
+  if (res.headersSent) {
+    return;
   }
+
+  if (typeof err === "object" && err && "type" in err && (err as { type?: string }).type === "entity.too.large") {
+    return res.status(413).json({
+      error: "Arquivo muito grande. Para vídeo, envie até 80MB ou use uma URL pública externa do MP4.",
+    });
+  }
+
+  res.status(500).json({ error: "Erro interno do servidor" });
 });
 
 app.listen(port, async () => {
