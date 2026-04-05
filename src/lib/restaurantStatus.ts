@@ -6,7 +6,6 @@ export function isRestaurantOpen(schedules: any): { isOpen: boolean; message: st
     return { isOpen: true, message: 'Horários não configurados' };
   }
 
-  // Pega horário atual de São Paulo
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -15,19 +14,19 @@ export function isRestaurantOpen(schedules: any): { isOpen: boolean; message: st
     weekday: 'long',
     hour12: false
   });
-  
+
   const parts = formatter.formatToParts(now);
   const weekdayPart = parts.find(p => p.type === 'weekday');
   const hourPart = parts.find(p => p.type === 'hour');
   const minutePart = parts.find(p => p.type === 'minute');
-  
+
   if (!weekdayPart || !hourPart || !minutePart) {
     return { isOpen: true, message: 'Erro ao verificar horário' };
   }
 
   const currentTime = `${hourPart.value}:${minutePart.value}`;
-  
-  // Mapeia dia da semana em português para chave do objeto
+  const currentMinutes = toMinutes(currentTime);
+
   const weekdayMap: { [key: string]: string } = {
     'segunda-feira': 'monday',
     'terça-feira': 'tuesday',
@@ -38,45 +37,76 @@ export function isRestaurantOpen(schedules: any): { isOpen: boolean; message: st
     'domingo': 'sunday'
   };
 
+  const weekdayLabels: { [key: string]: string } = {
+    monday: 'segunda',
+    tuesday: 'terça',
+    wednesday: 'quarta',
+    thursday: 'quinta',
+    friday: 'sexta',
+    saturday: 'sábado',
+    sunday: 'domingo'
+  };
+
+  const orderedDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
   const todayKey = weekdayMap[weekdayPart.value.toLowerCase()];
   if (!todayKey) {
     return { isOpen: true, message: 'Dia da semana não identificado' };
   }
 
-  const todaySchedules = schedules[todayKey];
-  
-  // Se não tem horários configurados para hoje, considera fechado
-  if (!todaySchedules || !Array.isArray(todaySchedules) || todaySchedules.length === 0) {
-    return { isOpen: false, message: 'Fechado hoje' };
-  }
+  const todaySchedules = normalizeSchedules(schedules[todayKey]);
 
-  // Verifica se está dentro de algum período de funcionamento
   for (const schedule of todaySchedules) {
-    if (!schedule.start || !schedule.end) continue;
-    
     if (isTimeInRange(currentTime, schedule.start, schedule.end)) {
-      return { 
-        isOpen: true, 
-        message: `Aberto até ${schedule.end}` 
+      return {
+        isOpen: true,
+        message: `Aberto até ${schedule.end}`
       };
     }
   }
 
-  // Se não está em nenhum horário, verifica qual é o próximo horário
-  const nextSchedule = todaySchedules.find((s: any) => s.start && s.start > currentTime);
-  if (nextSchedule) {
-    return { 
-      isOpen: false, 
-      message: `Abre às ${nextSchedule.start}` 
+  const nextToday = todaySchedules.find((schedule) => toMinutes(schedule.start) > currentMinutes);
+  if (nextToday) {
+    return {
+      isOpen: false,
+      message: `Abre hoje às ${nextToday.start}`
     };
   }
 
-  return { isOpen: false, message: 'Fechado' };
+  const todayIndex = orderedDays.indexOf(todayKey);
+  for (let offset = 1; offset <= 7; offset++) {
+    const nextDayKey = orderedDays[(todayIndex + offset) % orderedDays.length];
+    const nextSchedules = normalizeSchedules(schedules[nextDayKey]);
+    const nextSchedule = nextSchedules[0];
+
+    if (nextSchedule?.start) {
+      const dayLabel = offset === 1 ? 'amanhã' : weekdayLabels[nextDayKey];
+      return {
+        isOpen: false,
+        message: `Abre ${dayLabel} às ${nextSchedule.start}`
+      };
+    }
+  }
+
+  return { isOpen: false, message: 'Fechado no momento' };
 }
 
 /**
  * Verifica se um horário está dentro de um range
  */
+function normalizeSchedules(daySchedules: any): Array<{ start: string; end: string }> {
+  if (!Array.isArray(daySchedules)) return [];
+
+  return daySchedules
+    .filter((schedule) => schedule?.start && schedule?.end)
+    .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
+}
+
+function toMinutes(time: string): number {
+  const [hour, minute] = time.split(':').map(Number);
+  return (hour || 0) * 60 + (minute || 0);
+}
+
 function isTimeInRange(current: string, start: string, end: string): boolean {
   const [currentHour, currentMinute] = current.split(':').map(Number);
   const [startHour, startMinute] = start.split(':').map(Number);
